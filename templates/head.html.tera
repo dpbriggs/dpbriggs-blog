@@ -16,7 +16,4 @@
 <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.14.1/highlight.min.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
 
-<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
-
-<link href="https://fonts.googleapis.com/css?family=Space+Mono" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css?family=Roboto|Space+Mono" rel="stylesheet">

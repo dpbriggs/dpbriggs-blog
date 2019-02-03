@@ -1,0 +1,11 @@
+{% extends "blog/blog_base" %}
+
+{% block blogcontent %}
+
+{% if not articles %}
+No articles... yet!
+{% else %}
+... show recent ...
+{% endif %}
+
+{% endblock blogcontent %}

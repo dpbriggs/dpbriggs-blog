@@ -51,7 +51,7 @@ lazy_static! {
         "/" => "index",
         "404" => "404",
         "500" => "500",
-        "/blog" => "blog/index",
+        "/blog" => "blog/blog_root",
         "/resume" => "resume/dpbriggs_resume.pdf",
         "/blog/<article>" => "blog/article"
     };

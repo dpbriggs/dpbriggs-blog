@@ -1,0 +1,38 @@
+{% extends "base" %}
+
+{% block content %}
+<div class="container-fluid blog-font">
+      <div class="row">
+          <!-- <nav class="col-md-2 d-none d-md-block bg-light sidebar light-padding"> -->
+          <nav class="col-md-2 ml-sm-auto col-sm-2 d-md-block bg-light sidebar d-none px-4 light-padding">
+          <div class="sidebar-sticky">
+              <ul class="nav flex-column">
+                  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                      <h6 class="monospace">Recent Articles</h6>
+                  </div>
+                  {% if recent_articles %}
+                  <ul class="nav flex-column">
+                      <li class="nav-item">
+                          <a class="nav-link active" href="#">
+                              Neato recent article
+                              <span class="sr-only">(current)</span>
+                          </a>
+                      </li>
+                  </ul>
+                  {% else %}
+                  There's no recent articles to show.
+                  {% endif %}
+              </ul>
+          </div>
+        </nav>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+          <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h4 class="monospace">dpbriggs blog</h4>
+          </div>
+          {% block blogcontent %}
+          {% endblock blogcontent %}
+        </main>
+      </div>
+    </div>
+{% endblock content %}
