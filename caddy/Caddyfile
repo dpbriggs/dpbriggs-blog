@@ -4,4 +4,8 @@ gzip
 cache
 proxy / localhost:8000
 
+tls {
+    dns cloudflare
+}
+
 redir https://www.dpbriggs.ca{uri} https://dpbriggs.ca{uri}
