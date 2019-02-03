@@ -8,4 +8,11 @@ tls {
     dns cloudflare
 }
 
+git https://github.com/dpbriggs/dpbriggs-blog {
+	path        .
+	branch      master
+	interval    10
+	then_long   chmod +x ./hot-update-site.sh && ./hot-update-site.sh
+}
+
 redir https://www.dpbriggs.ca{uri} https://dpbriggs.ca{uri}
