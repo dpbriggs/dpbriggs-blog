@@ -1,23 +1,7 @@
 <!doctype html>
 <html>
     <head>
-        <!-- Bootstrap -->
-        <!-- Required meta tags -->
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-        <!-- Bootstrap CSS -->
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
-        <!-- Highlight JS -->
-        <link rel="stylesheet"
-              href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.14.1/styles/default.min.css">
-        <link rel="stylesheet" href="static/css/blog.css">
-        <link rel="stylesheet" href="static/css/solarized-dark.css">
-        <link rel="stylesheet" href="static/css/bootstrap-slate.css">
-        <meta name="viewport"
-              content="width=device-width, initial-scale=1">
-        <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.14.1/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        {% include "head" %}
     </head>
     <body>
         <div>

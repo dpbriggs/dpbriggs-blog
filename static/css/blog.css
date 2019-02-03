@@ -1,3 +1,47 @@
 .navbar {
     padding: 0 !important;
 }
+.monospace {
+    font-family: 'Space Mono', monospace;
+}
+
+.tight-column {
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+}
+
+.center {
+    min-height: 100%;  /* Fallback for browsers do NOT support vh unit */
+    min-height: 100vh; /* These two lines are counted as one :-)       */
+
+    display: flex;
+    align-items: center;
+}
+
+.bordered {
+    border: 3px solid grey;
+    padding: 10px;
+}
+
+.navbar-underlined {
+    border-bottom:3px solid lightgrey !important;
+}
+
+.index-card {
+    margin-top: 10px;
+    width: 600px;
+}
+
+@media only screen and (max-width: 812px) {
+    .index-card {
+        position: absolute;
+        left: 0;
+        right: 0;
+        width: 100%;
+        flex: 1 0 auto;
+        margin-top: -10px;
+    }
+}
+/* .flex-grow { */
+/*     flex: 1 0 auto; */
+/* } */

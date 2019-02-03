@@ -1,0 +1,29 @@
+{% extends "centerpage" %}
+
+{% block content %}
+<div class="monospace"
+     <div>
+        <div class="container center d-flex h-100">
+        <div class="row align-items-center w-100">
+            <div class="align-self-center bordered mx-auto index-card">
+                <h1> 404 -- {{ uri }} </h1>
+                <br>
+                <br>
+                I couldn't find that page.
+                <br>
+                <br>
+                {% if uri is containing(blog_uri) %}
+                The blog article you're looking for may not exist or has been deleted.
+                {% else %}
+                The page you're looking for may not exist or has been deleted.
+                {% endif %}
+                <br>
+                <br>
+                <a href="{{ root_uri }}">Head Back to Home<span class="sr-only">(Head to Home)</span></a>
+
+            </div>
+        </div>
+    </div>
+     </div>
+</div>
+{% endblock content %}

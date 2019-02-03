@@ -1,0 +1,20 @@
+{% extends "centerpage" %}
+
+{% block centerpage %}
+<h1> 500 -- {{ uri }} </h1>
+<br>
+<br>
+Something bad happened. {% if uri == crash_uri %} (on purpose) {% endif %}
+<br>
+<br>
+Your interaction with {{ uri }} has crashed something in the backend.
+<br>
+<br>
+This event has been logged, but I encourage you to report this event
+by sending an email to {{ admin_email }} or opening an issue on
+<a href="{{ github_url }}" target="_blank">Github<span class="sr-only">(Github)</span></a>.
+If possible, please include steps to reproduce.
+<br>
+<br>
+<a href="{{ root_uri }}">Head Back to Home<span class="sr-only">(Head to Home)</span></a>
+{% endblock centerpage %}

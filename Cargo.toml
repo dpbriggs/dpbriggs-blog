@@ -5,9 +5,6 @@ authors = ["David Briggs <dpbriggs@edu.uwaterloo.ca>"]
 edition = "2018"
 
 [dependencies]
-serde = "0.8"
-serde_derive = "0.8"
-serde_json = "0.8"
 rocket = "0.4"
 
 [dependencies.rocket_contrib]

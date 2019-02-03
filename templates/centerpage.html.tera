@@ -1,0 +1,26 @@
+{% extends "base" %}
+
+{% block content %}
+<div class="monospace"
+     <div>
+        <div class="container center d-flex h-100">
+        <div class="row align-items-center w-100">
+            <div class="align-self-center bordered mx-auto index-card">
+                {% block centerpage %}
+                {% endblock centerpage %}
+            </div>
+        </div>
+    </div>
+    <!-- <p> -->
+    <!-- <h3> dpbriggs.ca </h3> -->
+
+    <!-- <pre> -->
+    <!-- <code class="python"> -->
+    <!-- def oh_hai_there(): -->
+    <!-- print("hello") -->
+    <!-- </code> -->
+    <!-- </pre> -->
+    <!-- </p> -->
+     </div>
+</div>
+{% endblock content %}

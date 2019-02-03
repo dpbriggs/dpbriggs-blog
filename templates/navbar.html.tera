@@ -1,9 +1,28 @@
-<nav class="navbar navbar-expand-sm navbar-light bg-light">
-  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+<nav class="navbar navbar-expand-sm">
+    <div class="navbar-collapse" id="navbarSupportedContent">
     <ul class="navbar-nav mr-auto">
-      <li class="nav-item active">
-        <a class="nav-link" href="#"> {{ site_name }} <span class="sr-only">(current)</span></a>
-      </li>
+        <div class="container monospace">
+            <div class="row">
+                <div class="col-sm tight-column {% if nav_site_href == '/' %} navbar-underlined {% endif %}">
+                    <a class="nav-link" href="/">
+                        Home
+                        <span class="sr-only">({{ nav_site_name }})</span>
+                    </a>
+                </div>
+                <div class="col-sm tight-column">
+                    <a class="nav-link" href="https://www.linkedin.com/in/dpbriggs/" target="_blank"> LinkedIn <span class="sr-only">(LinkedIn)</span></a>
+                </div>
+                <div class="col-sm tight-column">
+                    <a class="nav-link nobreak" href="https://github.com/dpbriggs" target="_blank">Github<span class="sr-only">(current)</span></a>
+                </div>
+                <div class="col-sm tight-column {% if nav_site_href == '/resume' %} navbar-underlined {% endif %}">
+                    <a class="nav-link" href="/resume"> Resume <span class="sr-only">(current)</span></a>
+                </div>
+                <div class="col-sm tight-column {% if nav_site_href == '/blog' %} navbar-underlined {% endif %}">
+                    <a class="nav-link" href="/blog"> Blog <span class="sr-only">(current)</span></a>
+                </div>
+            </div>
+        </div>
     </ul>
   </div>
 </nav>

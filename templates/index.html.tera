@@ -1,13 +1,31 @@
-{% extends "base" %}
+{% extends "centerpage" %}
 
-{% block content %}
-<p>
-    <p> Site is under construction. </p>
-    <pre>
-        <code class="python">
-      def oh_hai_there():
-          print("hello")
-        </code>
-    </pre>
-</p>
-{% endblock content %}
+{% block centerpage %}
+<span> David Briggs -- dpbriggs -- ({{ my_email }}) </span>
+<br>
+<br>
+Hi, I'm a software developer and student at the University of Waterloo.
+I enjoy building out complex applications.
+<br>
+<br>
+I have worked in <b>Ad Tech</b>, <b>Healthcare</b>, and
+<b>Enterprise Container R&D</b>.
+I've also designed <b>Big Data</b> solutions involving event-driven generic container frameworks.
+<br>
+<br>
+My goto languages include <b>Python</b>, <b>Scala</b>, <b>Rust</b>, and <b>Bash</b>.
+My goto tech includes <b>Docker</b>, <b>Kubernetes</b>, <b>Django</b>, and <b>React</b>.
+Checkout my
+<a href="/resume">Resume<span class="sr-only">(Resume)</span></a>
+for more details.
+<br>
+<br>
+I'm always interested in contracting, so I've gotten some experience supervisoring new team members,
+and adapting quickly to incoming demands with strict time budgets.
+<br>
+<br>
+If you're interested, I blog about random tech related things.
+You can checkout my
+<a href="/blog">blog here<span class="sr-only">(blog)</span></a>.
+</div>
+{% endblock centerpage %}
