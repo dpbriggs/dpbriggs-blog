@@ -1,0 +1,35 @@
+#+AUTHOR: David Briggs <email@dpbriggs.ca>
+
+* dpbriggs.ca
+
+This repository holds my personal website [[https://dpbriggs.ca][dpbriggs.ca]].
+
+
+Feel free to fork and modify this website. Please note this website
+is under GPLv3 so be sure to keep the license and attribute.
+
+
+Built with:
+- [[https://rocket.rs/][Rocket]] 🚀 (Rust Web Framework)
+- [[https://github.com/Keats/tera][Tera]] (Fast templating language/engine, similar to Jinja2)
+- [[https://getbootstrap.com/][Bootstrap]] (CSS framework)
+
+Items left to build:
+- [ ] Org mode blogging
+- [ ] Blog root page
+- [ ] Org mode blog pages & CSS
+
+
+** Running the website locally (development)
+
+Running the website locally is pretty easy, thanks to =cargo= and =rustup=.
+
+1. Be sure you have [[https://rustup.rs/][rustup]] to install a nightly toolchain.
+2. Install a nightly toolchain =rustup toolchain add nightly=
+3. Set nightly as your default toolchain =rustup default nightly=
+4. Clone and enter the project =git clone git@github.com:dpbriggs/dpbriggs-blog.git && cd dpbriggs-blog=
+5. Run the project =cargo run=
+6. (optional) rename the project (replace =myname= with whatever you want):
+   - =mv dpbriggs-blog myname-blog=
+   - Edit =Cargo.toml= and change instances of =dpbriggs= in there to =myname=
+   - Edit =src/main.rs= and update the default site context.

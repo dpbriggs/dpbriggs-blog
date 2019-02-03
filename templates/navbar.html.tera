@@ -10,13 +10,13 @@
                     </a>
                 </div>
                 <div class="col-sm tight-column">
-                    <a class="nav-link" href="https://www.linkedin.com/in/dpbriggs/" target="_blank"> LinkedIn <span class="sr-only">(LinkedIn)</span></a>
+                    <a class="nav-link" href="{{ linkedin_url }}" target="_blank"> LinkedIn <span class="sr-only">(LinkedIn)</span></a>
                 </div>
                 <div class="col-sm tight-column">
-                    <a class="nav-link nobreak" href="https://github.com/dpbriggs" target="_blank">Github<span class="sr-only">(current)</span></a>
+                    <a class="nav-link nobreak" href="{{ github_url }}" target="_blank">Github<span class="sr-only">(current)</span></a>
                 </div>
                 <div class="col-sm tight-column {% if nav_site_href == '/resume' %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="/resume"> Resume <span class="sr-only">(current)</span></a>
+                    <a class="nav-link" href="/resume" target="_blank"> Resume <span class="sr-only">(current)</span></a>
                 </div>
                 <div class="col-sm tight-column {% if nav_site_href == '/blog' %} navbar-underlined {% endif %}">
                     <a class="nav-link" href="/blog"> Blog <span class="sr-only">(current)</span></a>

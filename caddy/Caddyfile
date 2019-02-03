@@ -1,0 +1,7 @@
+dpbriggs.ca www.dpbriggs.ca
+
+gzip
+cache
+proxy / localhost:8000
+
+redir https://www.dpbriggs.ca{uri} https://dpbriggs.ca{uri}

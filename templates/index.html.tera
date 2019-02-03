@@ -1,7 +1,7 @@
 {% extends "centerpage" %}
 
 {% block centerpage %}
-<span> David Briggs -- dpbriggs -- ({{ my_email }}) </span>
+<span> {{ full_name }} -- {{ internet_handle }} -- ({{ my_email }}) </span>
 <br>
 <br>
 Hi, I'm a software developer and student at the University of Waterloo.

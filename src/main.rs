@@ -5,6 +5,7 @@
 extern crate rocket;
 extern crate rocket_contrib;
 use rocket::http::Status;
+use rocket::response::NamedFile;
 use rocket::Request;
 use rocket_contrib::serve::StaticFiles;
 use rocket_contrib::templates::Template;
@@ -13,27 +14,68 @@ use std::collections::HashMap;
 
 type SiteContext = HashMap<String, String>;
 
+macro_rules! site_context(
+    { $($key:expr => $value:expr),+ } => {
+        {
+            let mut m = SiteContext::new();
+            $(
+                m.insert($key.to_owned(), $value.to_owned());
+            )+
+                m
+        }
+    };
+);
+
 fn get_base_context() -> SiteContext {
-    let mut context = SiteContext::new();
-    context.insert("nav_site_name".to_owned(), "dpbriggs.ca".to_owned());
-    context.insert("nav_site_href".to_owned(), "/".to_owned());
-    context.insert("root_uri".to_owned(), "/".to_owned());
-    context.insert("blog_uri".to_owned(), "/blog".to_owned());
-    context.insert("resume_uri".to_owned(), "/resume".to_owned());
-    context.insert("crash_uri".to_owned(), "/500".to_owned());
-    context.insert("admin_email".to_owned(), "email@dpbriggs.ca".to_owned());
-    context.insert("my_email".to_owned(), "email@dpbriggs.ca".to_owned());
-    context.insert(
-        "github_url".to_owned(),
-        "https://github.com/dpbriggs".to_owned(),
-    );
-    context
+    site_context! {
+        "nav_site_name" =>  "dpbriggs.ca",
+        "nav_site_href" =>  "/",
+        "root_uri" =>  "/",
+        "blog_uri" =>  "/blog",
+        "resume_uri" =>  "/resume",
+        "crash_uri" =>  "/500",
+        "admin_email" =>  "email@dpbriggs.ca",
+        "full_name" =>  "David Briggs",
+        "internet_handle" =>  "dpbriggs",
+        "my_email" =>  "email@dpbriggs.ca",
+        "github_url" => "https://github.com/dpbriggs",
+        "github_repo_url" => "https://github.com/dpbriggs/dpbriggs-blog",
+        "linkedin_url" => "https://www.linkedin.com/in/dpbriggs"
+    }
 }
+
+// fn get_base_context() -> SiteContext {
+//     let mut context = SiteContext::new();
+//     context.insert("nav_site_name".to_owned(), "dpbriggs.ca".to_owned());
+//     context.insert("nav_site_href".to_owned(), "/".to_owned());
+//     context.insert("root_uri".to_owned(), "/".to_owned());
+//     context.insert("blog_uri".to_owned(), "/blog".to_owned());
+//     context.insert("resume_uri".to_owned(), "/resume".to_owned());
+//     context.insert("crash_uri".to_owned(), "/500".to_owned());
+//     context.insert("admin_email".to_owned(), "email@dpbriggs.ca".to_owned());
+//     context.insert("full_name".to_owned(), "David Briggs".to_owned());
+//     context.insert("internet_handle".to_owned(), "dpbriggs".to_owned());
+//     context.insert("my_email".to_owned(), "email@dpbriggs.ca".to_owned());
+//     context.insert(
+//         "github_url".to_owned(),
+//         "https://github.com/dpbriggs".to_owned(),
+//     );
+//     context.insert(
+//         "linkedin_url".to_owned(),
+//         "https://www.linkedin.com/in/dpbriggs/".to_owned(),
+//     );
+//     context
+// }
 
 #[get("/")]
 fn index() -> Template {
     let context = get_base_context();
     Template::render("index", context)
+}
+
+#[get("/resume")]
+fn resume() -> std::io::Result<NamedFile> {
+    NamedFile::open("resume/dpbriggs_resume.pdf")
 }
 
 #[get("/500")]
@@ -55,13 +97,16 @@ fn server_err(req: &Request) -> Template {
     Template::render("500", context)
 }
 
-fn main() {
+fn start_server() -> rocket::Rocket {
     let static_files = StaticFiles::from("static");
-    let routes = routes![index, crash];
+    let routes = routes![index, crash, resume];
     rocket::ignite()
         .mount("/", routes)
         .mount("/static", static_files)
         .register(catchers![not_found, server_err])
         .attach(Template::fairing())
-        .launch();
+}
+
+fn main() {
+    start_server().launch();
 }

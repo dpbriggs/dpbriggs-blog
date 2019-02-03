@@ -7,12 +7,18 @@
 Something bad happened. {% if uri == crash_uri %} (on purpose) {% endif %}
 <br>
 <br>
+{% if uri == resume_uri %}
+I'm probably updating the website right now, so the my <b>Resume</b> is unavailable.
+Please try again in a few minutes. In the meantime, please checkout my 
+<a href="{{ linkedin_url }}" target="_blank">LinkedIn<span class="sr-only">(LinkedIn)</span></a>.
+{% else %}
 Your interaction with {{ uri }} has crashed something in the backend.
+{% endif %}
 <br>
 <br>
 This event has been logged, but I encourage you to report this event
 by sending an email to {{ admin_email }} or opening an issue on
-<a href="{{ github_url }}" target="_blank">Github<span class="sr-only">(Github)</span></a>.
+<a href="{{ github_repo_url }}" target="_blank">Github<span class="sr-only">(Github)</span></a>.
 If possible, please include steps to reproduce.
 <br>
 <br>
