@@ -1,4 +1,8 @@
-.navbar {
+@import url('https://fonts.googleapis.com/css?family=Roboto|Space+Mono');
+
+/* html,html *{box-sizing: border-box !important;} */
+
+.navbar-no-padding {
     padding: 0 !important;
 }
 
@@ -8,34 +12,44 @@
 
 .blog-side-bar-title {
     padding: 10px;
-
+    box-sizing: border-box
 
 }
 
+.no-wrap {
+    display: flex;
+    white-space:nowrap;
+}
+
 .monospace {
+    font-family: monospace;
     font-family: 'Space Mono', monospace;
 }
 
 .blog-font {
     font-family: 'Roboto', sans-serif;
+    font-family: sans-serif;
 }
 
 .tight-column {
     padding-left: 0px !important;
     padding-right: 0px !important;
+    box-sizing: border-box
 }
 
-.center {
+.center-desktop {
     min-height: 100%;  /* Fallback for browsers do NOT support vh unit */
     min-height: 100vh; /* These two lines are counted as one :-)       */
 
     display: flex;
     align-items: center;
+
 }
 
 .bordered {
     border: 3px solid grey;
     padding: 10px;
+    box-sizing: border-box
 }
 
 .navbar-underlined {
@@ -48,18 +62,15 @@
 }
 
 @media only screen and (max-width: 812px) {
-    .index-card {
-        position: absolute;
-        left: 0;
-        right: 0;
-        width: 100%;
-        flex: 1 0 auto;
-        margin-top: -10px;
+    .center-desktop {
+        min-height: 100%;  /* Fallback for browsers do NOT support vh unit */
+        min-height: 0vh; /* These two lines are counted as one :-)       */
+
+        display: flex;
+        align-items: center;
     }
+
 }
-/* .flex-grow { */
-/*     flex: 1 0 auto; */
-/* } */
 
 .sidebar {
     position: fixed;

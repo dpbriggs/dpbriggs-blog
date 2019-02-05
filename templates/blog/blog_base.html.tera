@@ -3,7 +3,6 @@
 {% block content %}
 <div class="container-fluid blog-font">
       <div class="row">
-          <!-- <nav class="col-md-2 d-none d-md-block bg-light sidebar light-padding"> -->
           <nav class="col-md-2 ml-sm-auto col-sm-2 d-md-block bg-light sidebar d-none px-4 light-padding">
           <div class="sidebar-sticky">
               <ul class="nav flex-column">

@@ -1,7 +1,7 @@
 {% extends "centerpage" %}
 
 {% block centerpage %}
-<h1> 500 -- {{ uri }} </h1>
+<h1> 500 {{ web_sep }} {{ uri }} </h1>
 <br>
 <br>
 Something bad happened. {% if uri == crash_uri %} (on purpose) {% endif %}

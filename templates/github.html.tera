@@ -1,0 +1,69 @@
+{% extends "centerpage" %}
+
+{% block content %}
+<div class="monospace"
+    <div>
+        <div class="container center-desktop d-flex h-100">
+            <div class="row align-items-center w-100">
+                <div class="align-self-center bordered mx-auto index-card">
+                    <h3> dpbriggs | <a href="{{ github_url }}" target="_blank"> Github<span class="sr-only">(current)</span></a></h3>
+                    <br>
+                    I generally store my projects on Github. It tends to be pretty bare as my time is usually divided between work, school, and contracts.
+                    Below is a list of some of my projects:
+                    <br>
+                    <br>
+                    <ul class="list-group">
+                        <li class="list-group-item">
+                            <a href="https://github.com/dpbriggs/dpbriggs-blog" target="_blank">
+                                dpbriggs-blog
+                            </a>
+                            <br>
+                            My personal website and blog.<br>
+                            Rust/Rocket/Bootstrap/Tera
+                        </li>
+                        <li class="list-group-item">
+                            <a href="https://github.com/dpbriggs/kv" target="_blank">
+                                kv
+                            </a>
+                            <br>
+                            Rust key-value storage with bash hooks. <br>
+                            Rust/Serde/Bash
+                        </li>
+                        <li class="list-group-item">
+                            <a href="https://github.com/dpbriggs/http-api-proxy" target="_blank">
+                                http-api-proxy
+                            </a>
+                            <br>
+                            A simple transparent HTTP API Proxy. <br>
+                            Python/Flask/Docker
+                        </li>
+                        <li class="list-group-item">
+                            <a href="https://github.com/dpbriggs/Distributed-Sieve-e" target="_blank">
+                                Distributed-Sieve-e
+                            </a>
+                            <br>
+                            Distributed sieve of eratosthenes.<br>
+                            Clojure/Java{Socket,ServerSocket}
+                        </li>
+                        <li class="list-group-item">
+                            <a href="https://github.com/dpbriggs/Salesman-Problem-Genetic-Algorithm" target="_blank">
+                                Salesman-Problem-Genetic-Algorithm
+                            </a>
+                            <br>
+                            Genetic algorithm and the travelling salesmen problem. <br>
+                            Clojure/Async
+                        </li>
+                    </ul>
+                    <br>
+                    <br>
+                    <a href="{{ github_url }}" target="_blank">View Github<span class="sr-only">(current)</span></a>
+                    <br>
+                    <br>
+                    <a href="{{ root_uri }}">Head Back to Home<span class="sr-only">(current)</span></a>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

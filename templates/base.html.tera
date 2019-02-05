@@ -5,6 +5,7 @@
     </head>
     <body>
         <div>
+        </div>
             {% include "navbar" %}
 
             {% block content %}

@@ -10,13 +10,21 @@ use rocket::Route;
 
 #[get("/")]
 fn index() -> Template {
-    let context = get_base_context();
+    let mut context = get_base_context();
+    context.insert("nav_site_href".to_owned(), "/".to_string());
     Template::render("index", context)
 }
 
+#[get("/resume_pdf")]
+fn resume_pdf() -> std::io::Result<NamedFile> {
+    NamedFile::open(get_template("/resume_pdf"))
+}
+
 #[get("/resume")]
-fn resume() -> std::io::Result<NamedFile> {
-    NamedFile::open(get_template("/resume"))
+fn resume() -> Template {
+    let mut context = get_base_context();
+    context.insert("nav_site_href".to_owned(), "/resume".to_string());
+    Template::render(get_template("/resume"), context)
 }
 
 #[get("/500")]
@@ -29,6 +37,20 @@ fn blog_index() -> Template {
     let mut context = get_base_context();
     context.insert("nav_site_href".to_owned(), "/blog".to_string());
     Template::render(get_template("/blog"), context)
+}
+
+#[get("/linkedin")]
+fn linkedin() -> Template {
+    let mut context = get_base_context();
+    context.insert("nav_site_href".to_owned(), "/linkedin".to_string());
+    Template::render(get_template("/linkedin"), context)
+}
+
+#[get("/github")]
+fn github() -> Template {
+    let mut context = get_base_context();
+    context.insert("nav_site_href".to_owned(), "/github".to_string());
+    Template::render(get_template("/github"), context)
 }
 
 #[catch(404)]
@@ -48,7 +70,7 @@ fn server_err(req: &Request) -> Template {
 pub fn get_routes() -> (StaticFiles, Vec<Route>, Vec<Catcher>) {
     (
         StaticFiles::from("static"),
-        routes![index, crash, resume, blog_index],
+        routes![index, crash, resume, blog_index, linkedin, github, resume_pdf],
         catchers![server_err, not_found],
     )
 }

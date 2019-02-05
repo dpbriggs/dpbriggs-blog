@@ -3,13 +3,10 @@
 {% block content %}
 <div class="monospace"
      <div>
-        <div class="container center d-flex h-100">
+        <div class="container center-desktop d-flex h-100">
         <div class="row align-items-center w-100">
             <div class="align-self-center bordered mx-auto index-card">
-                <h1> 404 -- {{ uri }} </h1>
-                <br>
-                <br>
-                I couldn't find that page.
+                <h1> 404 {{ web_sep }} {{ uri }} </h1>
                 <br>
                 <br>
                 {% if uri is containing(blog_uri) %}

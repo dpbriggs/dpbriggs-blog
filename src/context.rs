@@ -18,12 +18,17 @@ macro_rules! site_context(
 
 pub fn get_base_context() -> SiteContext {
     site_context! {
-        "nav_site_name" =>  "dpbriggs.ca",
+        "domain_name" =>  "dpbriggs.ca",
         "nav_site_href" =>  "/",
         "root_uri" =>  "/",
         "blog_uri" =>  "/blog",
         "resume_uri" =>  "/resume",
+        "linkedin_uri" =>  "/linkedin",
+        "github_uri" =>  "/github",
+        "resume_uri" =>  "/resume",
+        "resume_pdf_uri" =>  "/resume_pdf",
         "crash_uri" =>  "/500",
+        "web_sep" =>  "--",
         "admin_email" =>  "email@dpbriggs.ca",
         "full_name" =>  "David Briggs",
         "internet_handle" =>  "dpbriggs",
@@ -52,7 +57,10 @@ lazy_static! {
         "404" => "404",
         "500" => "500",
         "/blog" => "blog/blog_root",
-        "/resume" => "resume/dpbriggs_resume.pdf",
+        "/linkedin" => "linkedin",
+        "/github" => "github",
+        "/resume_pdf" => "resume/dpbriggs_resume.pdf",
+        "/resume" => "resume",
         "/blog/<article>" => "blog/article"
     };
 }
