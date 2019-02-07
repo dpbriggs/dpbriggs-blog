@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto|Space+Mono');
+
+/* html,html *{box-sizing: border-box !important;} */
+
+.navbar-no-padding {
+    padding: 0 !important;
+}
+
+.light-padding {
+    padding: 0px !important;
+}
+
+.blog-side-bar-title {
+    padding: 10px;
+    box-sizing: border-box
+
+}
+
+.no-wrap {
+    display: flex;
+    white-space:nowrap;
+}
+
+.monospace {
+    font-family: monospace;
+    font-family: 'Space Mono', monospace;
+}
+
+.blog-font {
+    font-family: 'Roboto', sans-serif;
+    font-family: sans-serif;
+}
+
+.tight-column {
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+    box-sizing: border-box
+}
+
+.center-desktop {
+    min-height: 100%;  /* Fallback for browsers do NOT support vh unit */
+    min-height: 100vh; /* These two lines are counted as one :-)       */
+
+    display: flex;
+    align-items: center;
+
+}
+
+.bordered {
+    border: 3px solid grey;
+    padding: 10px;
+    box-sizing: border-box
+}
+
+.navbar-underlined {
+    border-bottom:3px solid lightgrey !important;
+}
+
+.index-card {
+    margin-top: 10px;
+    width: 600px;
+}
+
+@media only screen and (max-width: 812px) {
+    .center-desktop {
+        min-height: 100%;  /* Fallback for browsers do NOT support vh unit */
+        min-height: 0vh; /* These two lines are counted as one :-)       */
+
+        display: flex;
+        align-items: center;
+    }
+
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100; /* Behind the navbar */
+    padding: 48px 0 0; /* Height of navbar */
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+}
+
+.sidebar-sticky {
+    position: relative;
+    top: 0;
+    height: calc(100vh - 48px);
+    padding-top: .5rem;
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+}
+
+@supports ((position: -webkit-sticky) or (position: sticky)) {
+    .sidebar-sticky {
+        position: -webkit-sticky;
+        position: sticky;
+    }
+}
+
+.sidebar .nav-link {
+    font-weight: 500;
+    color: #333;
+}
+
+.sidebar .nav-link .feather {
+    margin-right: 4px;
+    color: #999;
+}
+
+.sidebar .nav-link.active {
+    color: #007bff;
+}
+
+.sidebar .nav-link:hover .feather,
+.sidebar .nav-link.active .feather {
+    color: inherit;
+}
+
+.sidebar-heading {
+    font-size: .75rem;
+    text-transform: uppercase;
+}

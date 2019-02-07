@@ -4,7 +4,7 @@ use rocket::Request;
 use rocket_contrib::serve::StaticFiles;
 use rocket_contrib::templates::Template;
 
-use crate::context::{get_base_context, get_template};
+use crate::context::{get_base_context, get_special_context, get_template};
 use rocket::Catcher;
 use rocket::Route;
 
