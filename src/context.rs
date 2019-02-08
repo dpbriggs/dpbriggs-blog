@@ -1,17 +1,18 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-use crate::blog::{get_org_blog, OrgBlog};
+use crate::blog::{get_org_blog, OrgBlog, OrgModeHtml};
 
 pub type SiteContextKv = HashMap<String, String>;
 pub type SiteContextBlog = OrgBlog;
 type TemplateMap = HashMap<&'static str, &'static str>;
 
 #[derive(Serialize, Debug)]
-pub struct SiteContext {
+pub struct SiteContext<'a> {
     pub base: &'static SiteContextKv,
     pub kv: SiteContextKv,
-    blog: &'static SiteContextBlog,
+    pub blog: &'static SiteContextBlog,
+    pub curr_blog: Option<&'a OrgModeHtml>,
 }
 
 macro_rules! site_context(
@@ -64,6 +65,7 @@ pub fn get_base_context(nav_href_uri: &str) -> SiteContext {
             tmp
         },
         blog: &STATIC_BLOG_ENTRIES,
+        curr_blog: None,
     }
 }
 
@@ -88,8 +90,7 @@ lazy_static! {
         "/linkedin" => "linkedin",
         "/github" => "github",
         "/resume_pdf" => "resume/dpbriggs_resume.pdf",
-        "/resume" => "resume",
-        "/blog/<article>" => "blog/article"
+        "/resume" => "resume"
     };
 }
 

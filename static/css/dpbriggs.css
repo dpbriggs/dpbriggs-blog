@@ -1,6 +1,28 @@
 @import url('https://fonts.googleapis.com/css?family=Roboto|Space+Mono');
 
-/* html,html *{box-sizing: border-box !important;} */
+
+/* As I don't want to get around to configuring org-mode */
+/* to output the html I want, we have to use these. */
+
+h1,h2,h3,h4 {
+    font-family: monospace !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: .60rem;
+}
+
+.blog-card {
+    max-height: 250px;
+    display: inline-block
+}
+
+ul,li {
+    padding-left: 7px;
+    word-wrap: break-word;
+}
+
+.blog-article {
+    width: 75%;
+}
 
 .navbar-no-padding {
     padding: 0 !important;
@@ -69,7 +91,9 @@
         display: flex;
         align-items: center;
     }
-
+    .blog-article {
+        width: 100%;
+    }
 }
 
 .sidebar {
@@ -121,3 +145,4 @@
     font-size: .75rem;
     text-transform: uppercase;
 }
+

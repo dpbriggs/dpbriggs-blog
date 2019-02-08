@@ -1,0 +1,31 @@
+{% extends "blog/blog_base" %}
+
+<!-- -------------------- Title -------------------- -->
+
+{% block blog_title %}
+<h4 class="monospace">{{ curr_blog.title }}</h4>
+{% endblock blog_title %}
+
+
+<!-- -------------------- Sidebar -------------------- -->
+
+{% block blog_sidebar_title %}
+<h6 class="monospace">Table of Contents</h6>
+{% endblock blog_sidebar_title %}
+
+{% block blogsidebar %}
+
+<ul class="nav flex-column">
+    {{ curr_blog.toc | safe }}
+</ul>
+
+{% endblock blogsidebar %}
+
+<!-- -------------------- Content -------------------- -->
+{% block blogcontent %}
+
+<div class="container bordered">
+    {{ curr_blog.html | safe }}
+</div>
+
+{% endblock blogcontent %}

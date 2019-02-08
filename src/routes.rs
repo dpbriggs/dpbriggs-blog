@@ -37,6 +37,19 @@ fn blog_index() -> Template {
     Template::render(get_template("/blog"), context)
 }
 
+#[get("/blog/<slug>")]
+fn blog_article(slug: String) -> Option<Template> {
+    let mut context = get_base_context("/blog");
+    match context.blog.html.get(&slug) {
+        Some(curr_blog) => {
+            context.curr_blog = Some(curr_blog);
+            context.kv.insert("curr_slug".to_owned(), slug);
+            Some(Template::render("blog/blog_article", context))
+        }
+        None => None,
+    }
+}
+
 #[get("/linkedin")]
 fn linkedin() -> Template {
     let context = get_base_context("/linkedin");
@@ -66,7 +79,16 @@ fn server_err(req: &Request) -> Template {
 pub fn get_routes() -> (StaticFiles, Vec<Route>, Vec<Catcher>) {
     (
         StaticFiles::from("static"),
-        routes![index, crash, resume, blog_index, linkedin, github, resume_pdf],
+        routes![
+            index,
+            crash,
+            resume,
+            blog_index,
+            linkedin,
+            github,
+            resume_pdf,
+            blog_article
+        ],
         catchers![server_err, not_found],
     )
 }

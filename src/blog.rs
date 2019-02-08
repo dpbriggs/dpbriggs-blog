@@ -21,12 +21,12 @@ pub struct OrgBlog {
 
 #[derive(Serialize, Debug, Clone)]
 pub struct OrgModeHtml {
-    title: String,
-    date: NaiveDate,
-    toc: String,
-    html: String,
-    blog_string: String,
-    slug: String,
+    pub title: String,
+    pub date: NaiveDate,
+    pub toc: String,
+    pub html: String,
+    pub blog_string: String,
+    pub slug: String,
 }
 
 fn get_html_files() -> Result<Vec<PathBuf>, io::Error> {
@@ -80,7 +80,7 @@ fn get_html_contents(blog_files: Vec<PathBuf>) -> Vec<OrgModeHtml> {
         };
 
         let toc = document
-            .find(Attr("id", "table-of-contents"))
+            .find(Attr("id", "text-table-of-contents"))
             .next()
             .unwrap()
             .html();

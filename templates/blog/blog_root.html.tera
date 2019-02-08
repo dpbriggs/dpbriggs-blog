@@ -1,13 +1,22 @@
 {% extends "blog/blog_base" %}
 
+{% block blog_title %}
+<h4 class="monospace">dpbriggs blog</h4>
+{% endblock blog_title %}
+
+<!-- -------------------- Sidebar -------------------- -->
+{% block blog_sidebar_title %}
+<h6 class="monospace">Recent Articles</h6>
+{% endblock blog_sidebar_title %}
+
 {% block blogsidebar %}
 
 {% if blog.blog_files %}
 <ul class="nav flex-column">
     {% for blog in blog.blog_files %}
     <li class="nav-item">
-        <a class="nav-link active" href="#">
-            {{ blog.slug }}
+        <a class="nav-link active" href="{{ base.blog_uri}}/{{blog.slug}}">
+            {{ blog.title }}
             <span class="sr-only">(current)</span>
         </a>
     </li>
@@ -21,17 +30,23 @@ There's no recent articles to show.
 
 {% endblock blogsidebar %}
 
+<!-- -------------------- Content -------------------- -->
 {% block blogcontent %}
 
 {% if not blog.blog_files %}
 No articles... yet!
 {% else %}
 
+<div class="container">
   {% for blog in blog.blog_files %}
-    {{ blog.html | safe }}
+    <div class="bordered px-2">
+        <div class="text-wrap blog-card text-truncate">
+            {{ blog.html | safe }}
+        </div>
+        ... <a href="{{ base.blog_uri }}/{{blog.slug}}">Continue Reading<span class="sr-only">(current)</span></a>
+    </div>
   {% endfor %}
-
-... show recent ...
+</div>
 {% endif %}
 
 {% endblock blogcontent %}

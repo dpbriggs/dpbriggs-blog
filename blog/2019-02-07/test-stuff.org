@@ -1,8 +1,8 @@
 #+AUTHOR: David Briggs
-#+TITLE: Making an Org Mode Blog in Rust
+#+TITLE: Neato Title
 #+TAGS: rust tera org-mode
-#+OPTIONS: html-style:nil
-<2019-02-06 Wed>
+#+OPTIONS: html-style:nil num:nil
+<2019-02-07 Thu>
 
 * First Level
 

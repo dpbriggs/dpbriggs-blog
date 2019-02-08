@@ -7,7 +7,8 @@
           <div class="sidebar-sticky">
               <ul class="nav flex-column">
                   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                      <h6 class="monospace">Recent Articles</h6>
+                      {% block blog_sidebar_title %}
+                      {% endblock blog_sidebar_title %}
                   </div>
                   {% block blogsidebar %}
                   {% endblock blogsidebar %}
@@ -17,10 +18,13 @@
 
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
           <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-            <h4 class="monospace">dpbriggs blog</h4>
+              {% block blog_title %}
+              {% endblock blog_title %}
           </div>
+          <div class="float-left blog-article">
           {% block blogcontent %}
           {% endblock blogcontent %}
+          </div>
         </main>
       </div>
     </div>
