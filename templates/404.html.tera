@@ -6,7 +6,7 @@
         <div class="container center-desktop d-flex h-100">
         <div class="row align-items-center w-100">
             <div class="align-self-center bordered mx-auto index-card">
-                <h1> 404 {{ web_sep }} {{ uri }} </h1>
+                <h1> 404 {{ base.web_sep }} {{ kv.uri }} </h1>
                 <br>
                 <br>
                 {% if uri is containing(blog_uri) %}
@@ -16,7 +16,7 @@
                 {% endif %}
                 <br>
                 <br>
-                <a href="{{ root_uri }}">Head Back to Home<span class="sr-only">(Head to Home)</span></a>
+                <a href="{{ base.root_uri }}">Head Back to Home<span class="sr-only">(Head to Home)</span></a>
 
             </div>
         </div>

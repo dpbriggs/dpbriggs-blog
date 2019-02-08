@@ -1,20 +1,32 @@
+extern crate chrono;
 extern crate select;
+use chrono::NaiveDate;
 use select::document::Document;
 use select::predicate::{Attr, Class};
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
 
+type Slug = String;
 static BLOG_ROOT: &'static str = "blog/";
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
+pub struct OrgBlog {
+    pub html: HashMap<Slug, OrgModeHtml>,
+    // Blog files should be sorted by date (newest is at head)
+    pub blog_files: Vec<OrgModeHtml>,
+}
+
+#[derive(Serialize, Debug, Clone)]
 pub struct OrgModeHtml {
     title: String,
-    date: String,
+    date: NaiveDate,
     toc: String,
-    blog_contents: String,
-    file_path: String,
+    html: String,
+    blog_string: String,
+    slug: String,
 }
 
 fn get_html_files() -> Result<Vec<PathBuf>, io::Error> {
@@ -57,24 +69,44 @@ fn get_html_contents(blog_files: Vec<PathBuf>) -> Vec<OrgModeHtml> {
             }
         };
         let title = document.find(Class("title")).next().unwrap().text();
-        let date = document.find(Class("timestamp")).next().unwrap().text();
+        let date_string = document.find(Class("timestamp")).next().unwrap().text();
+        // <2019-02-06 Wed> == <%Y-%m-%d %a>
+        let date = match NaiveDate::parse_from_str(&date_string[..], "<%Y-%m-%d %a>") {
+            Ok(d) => d,
+            Err(e) => {
+                error!("Could not parse date for {:?}", date_string);
+                panic!("Failed to parse date! {:?}", e)
+            }
+        };
+
         let toc = document
             .find(Attr("id", "table-of-contents"))
             .next()
             .unwrap()
             .html();
-        let blog_contents = document.find(Class("outline-2")).next().unwrap().html();
-        let file_path = blog_file.into_os_string().into_string().unwrap();
+        let html = document.find(Class("outline-2")).next().unwrap().html();
+        let blog_string = document.find(Class("outline-2")).next().unwrap().text();
+        dbg!(&blog_string);
+        let slug = blog_file
+            .into_os_string()
+            .into_string()
+            .unwrap()
+            .split("/")
+            .last()
+            .unwrap()
+            .replace(".html", "");
         org_mode_files.push(OrgModeHtml {
             title,
             date,
             toc,
-            blog_contents,
-            file_path,
+            html,
+            blog_string,
+            slug,
         })
     }
 
     dbg!(&org_mode_files);
+    org_mode_files.sort_by(|a, b| a.date.cmp(&b.date));
     org_mode_files
 }
 
@@ -83,4 +115,14 @@ pub fn get_org_mode_files() -> Vec<OrgModeHtml> {
         Ok(org) => get_html_contents(org),
         Err(e) => panic!(e),
     }
+}
+
+pub fn get_org_blog() -> OrgBlog {
+    let blog_files = get_org_mode_files();
+    let html: HashMap<Slug, OrgModeHtml> = blog_files
+        .clone()
+        .into_iter()
+        .map(|x| (x.slug.clone(), x))
+        .collect();
+    OrgBlog { html, blog_files }
 }

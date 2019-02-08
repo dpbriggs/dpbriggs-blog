@@ -6,23 +6,23 @@
     <ul class="navbar-nav mr-auto">
         <div class="container monospace">
             <div class="row">
-                <div class="col-sm tight-column {% if nav_site_href == root_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ root_uri }}">
+                <div class="col-sm tight-column {% if kv.nav_site_href == base.root_uri %} navbar-underlined {% endif %}">
+                    <a class="nav-link" href="{{ base.root_uri }}">
                         Home
-                        <span class="sr-only">({{ domain_name }})</span>
+                        <span class="sr-only">({{ base.domain_name }})</span>
                     </a>
                 </div>
-                <div class="col-sm tight-column {% if nav_site_href == linkedin_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ linkedin_uri }}"> LinkedIn <span class="sr-only">(current)</span></a>
+                <div class="col-sm tight-column {% if kv.nav_site_href == base.linkedin_uri %} navbar-underlined {% endif %}">
+                    <a class="nav-link" href="{{ base.linkedin_uri }}"> LinkedIn <span class="sr-only">(current)</span></a>
                 </div>
-                <div class="col-sm tight-column {% if nav_site_href == github_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ github_uri }}"> Github <span class="sr-only">(current)</span></a>
+                <div class="col-sm tight-column {% if kv.nav_site_href == base.github_uri %} navbar-underlined {% endif %}">
+                    <a class="nav-link" href="{{ base.github_uri }}"> Github <span class="sr-only">(current)</span></a>
                 </div>
-                <div class="col-sm tight-column {% if nav_site_href == resume_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ resume_uri }}"> Resume <span class="sr-only">(current)</span></a>
+                <div class="col-sm tight-column {% if kv.nav_site_href == base.resume_uri %} navbar-underlined {% endif %}">
+                    <a class="nav-link" href="{{ base.resume_uri }}"> Resume <span class="sr-only">(current)</span></a>
                 </div>
-                <div class="col-sm tight-column {% if nav_site_href == blog_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ blog_uri }}"> Blog <span class="sr-only">(current)</span></a>
+                <div class="col-sm tight-column {% if kv.nav_site_href == base.blog_uri %} navbar-underlined {% endif %}">
+                    <a class="nav-link" href="{{ base.blog_uri }}"> Blog <span class="sr-only">(current)</span></a>
                 </div>
             </div>
         </div>

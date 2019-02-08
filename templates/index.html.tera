@@ -1,8 +1,8 @@
 {% extends "centerpage" %}
 
 {% block centerpage %}
-<h3> {{ internet_handle }}  | <a href="#"> Home<span class="sr-only">(current)</span></a></h3>
-<span> {{ full_name }} {{ web_sep }} {{ my_email }} </span>
+<h3> {{ base.internet_handle }}  | <a href="#"> Home<span class="sr-only">(current)</span></a></h3>
+<span> {{ base.full_name }} {{ base.web_sep }} {{ base.my_email }} </span>
 <br>
 <br>
 Hi, I'm a software developer and student at the University of Waterloo.

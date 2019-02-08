@@ -10,6 +10,9 @@ lazy_static = "1.2.0"
 select = "0.4.2"
 serde = "1.0.87"
 serde_derive = "1.0.87"
+chrono = { version = "0.4.6", features = ["serde"] }
+simple_logger = "1.0.1"
+log = "0.4.6"
 
 [dependencies.rocket_contrib]
 version = "0.4.0"

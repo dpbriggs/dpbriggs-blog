@@ -1,26 +1,26 @@
 {% extends "centerpage" %}
 
 {% block centerpage %}
-<h1> 500 {{ web_sep }} {{ uri }} </h1>
+<h1> 500 {{ base.web_sep }} {{ kv.uri }} </h1>
 <br>
 <br>
-Something bad happened. {% if uri == crash_uri %} (on purpose) {% endif %}
+Something bad happened. {% if kv.uri == base.crash_uri %} (on purpose) {% endif %}
 <br>
 <br>
-{% if uri == resume_uri %}
+{% if kv.uri == base.resume_uri %}
 I'm probably updating the website right now, so the my <b>Resume</b> is unavailable.
 Please try again in a few minutes. In the meantime, please checkout my 
-<a href="{{ linkedin_url }}" target="_blank">LinkedIn<span class="sr-only">(LinkedIn)</span></a>.
+<a href="{{ base.linkedin_url }}" target="_blank">LinkedIn<span class="sr-only">(LinkedIn)</span></a>.
 {% else %}
-Your interaction with {{ uri }} has crashed something in the backend.
+Your interaction with {{ kv.uri }} has crashed something in the backend.
 {% endif %}
 <br>
 <br>
 This event has been logged, but I encourage you to report this event
-by sending an email to {{ admin_email }} or opening an issue on
-<a href="{{ github_repo_url }}" target="_blank">Github<span class="sr-only">(Github)</span></a>.
+by sending an email to {{ base.admin_email }} or opening an issue on
+<a href="{{ base.github_repo_url }}" target="_blank">Github<span class="sr-only">(Github)</span></a>.
 If possible, please include steps to reproduce.
 <br>
 <br>
-<a href="{{ root_uri }}">Head Back to Home<span class="sr-only">(Head to Home)</span></a>
+<a href="{{ base.root_uri }}">Head Back to Home<span class="sr-only">(Head to Home)</span></a>
 {% endblock centerpage %}

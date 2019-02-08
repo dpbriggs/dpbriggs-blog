@@ -1,10 +1,36 @@
 {% extends "blog/blog_base" %}
 
+{% block blogsidebar %}
+
+{% if blog.blog_files %}
+<ul class="nav flex-column">
+    {% for blog in blog.blog_files %}
+    <li class="nav-item">
+        <a class="nav-link active" href="#">
+            {{ blog.slug }}
+            <span class="sr-only">(current)</span>
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+
+There's no recent articles to show.
+
+{% endif %}
+
+{% endblock blogsidebar %}
+
 {% block blogcontent %}
 
-{% if not articles %}
+{% if not blog.blog_files %}
 No articles... yet!
 {% else %}
+
+  {% for blog in blog.blog_files %}
+    {{ blog.html | safe }}
+  {% endfor %}
+
 ... show recent ...
 {% endif %}
 

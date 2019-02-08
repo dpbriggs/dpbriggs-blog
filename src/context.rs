@@ -1,17 +1,17 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-use crate::blog::{get_org_mode_files, OrgModeHtml};
+use crate::blog::{get_org_blog, OrgBlog};
 
 pub type SiteContextKv = HashMap<String, String>;
-pub type SiteContextBlog = HashMap<String, String>;
+pub type SiteContextBlog = OrgBlog;
 type TemplateMap = HashMap<&'static str, &'static str>;
 
 #[derive(Serialize, Debug)]
-pub struct RealSiteContext {
+pub struct SiteContext {
     pub base: &'static SiteContextKv,
     pub kv: SiteContextKv,
-    // blog: &'static OrgModeHtml,
+    blog: &'static SiteContextBlog,
 }
 
 macro_rules! site_context(
@@ -25,6 +25,10 @@ macro_rules! site_context(
         }
     };
 );
+
+lazy_static! {
+    static ref STATIC_BLOG_ENTRIES: SiteContextBlog = get_org_blog();
+}
 
 lazy_static! {
     static ref STATIC_SITE_CONTEXT_KV: SiteContextKv = {
@@ -51,26 +55,15 @@ lazy_static! {
     };
 }
 
-pub fn get_base_context() -> SiteContextKv {
-    site_context! {
-        "domain_name" =>  "dpbriggs.ca",
-        "nav_site_href" =>  "/",
-        "root_uri" =>  "/",
-        "blog_uri" =>  "/blog",
-        "resume_uri" =>  "/resume",
-        "linkedin_uri" =>  "/linkedin",
-        "github_uri" =>  "/github",
-        "resume_uri" =>  "/resume",
-        "resume_pdf_uri" =>  "/resume_pdf",
-        "crash_uri" =>  "/500",
-        "web_sep" =>  "--",
-        "admin_email" =>  "email@dpbriggs.ca",
-        "full_name" =>  "David Briggs",
-        "internet_handle" =>  "dpbriggs",
-        "my_email" =>  "email@dpbriggs.ca",
-        "github_url" => "https://github.com/dpbriggs",
-        "github_repo_url" => "https://github.com/dpbriggs/dpbriggs-blog",
-        "linkedin_url" => "https://www.linkedin.com/in/dpbriggs"
+pub fn get_base_context(nav_href_uri: &str) -> SiteContext {
+    SiteContext {
+        base: &STATIC_SITE_CONTEXT_KV,
+        kv: {
+            let mut tmp = SiteContextKv::new();
+            tmp.insert("nav_site_href".to_owned(), nav_href_uri.to_owned());
+            tmp
+        },
+        blog: &STATIC_BLOG_ENTRIES,
     }
 }
 
@@ -85,13 +78,6 @@ macro_rules! template_map(
         }
     };
 );
-
-pub fn get_special_context() -> RealSiteContext {
-    RealSiteContext {
-        base: &STATIC_SITE_CONTEXT_KV,
-        kv: SiteContextKv::new(),
-    }
-}
 
 lazy_static! {
     pub static ref TEMPLATE_MAP: TemplateMap = template_map! {

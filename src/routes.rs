@@ -4,14 +4,14 @@ use rocket::Request;
 use rocket_contrib::serve::StaticFiles;
 use rocket_contrib::templates::Template;
 
-use crate::context::{get_base_context, get_special_context, get_template};
+use crate::context::{get_base_context, get_template};
 use rocket::Catcher;
 use rocket::Route;
 
 #[get("/")]
 fn index() -> Template {
-    let mut context = get_base_context();
-    context.insert("nav_site_href".to_owned(), "/".to_string());
+    let context = get_base_context("/");
+    dbg!(&context);
     Template::render("index", context)
 }
 
@@ -22,8 +22,7 @@ fn resume_pdf() -> std::io::Result<NamedFile> {
 
 #[get("/resume")]
 fn resume() -> Template {
-    let mut context = get_base_context();
-    context.insert("nav_site_href".to_owned(), "/resume".to_string());
+    let context = get_base_context("/resume");
     Template::render(get_template("/resume"), context)
 }
 
@@ -34,36 +33,33 @@ fn crash() -> Result<String, Status> {
 
 #[get("/blog")]
 fn blog_index() -> Template {
-    let mut context = get_base_context();
-    context.insert("nav_site_href".to_owned(), "/blog".to_string());
+    let context = get_base_context("/blog");
     Template::render(get_template("/blog"), context)
 }
 
 #[get("/linkedin")]
 fn linkedin() -> Template {
-    let mut context = get_base_context();
-    context.insert("nav_site_href".to_owned(), "/linkedin".to_string());
+    let context = get_base_context("/linkedin");
     Template::render(get_template("/linkedin"), context)
 }
 
 #[get("/github")]
 fn github() -> Template {
-    let mut context = get_base_context();
-    context.insert("nav_site_href".to_owned(), "/github".to_string());
+    let context = get_base_context("/github");
     Template::render(get_template("/github"), context)
 }
 
 #[catch(404)]
 fn not_found(req: &Request) -> Template {
-    let mut context = get_base_context();
-    context.insert("uri".to_owned(), req.uri().to_string());
+    let mut context = get_base_context("/");
+    context.kv.insert("uri".to_owned(), req.uri().to_string());
     Template::render(get_template("404"), context)
 }
 
 #[catch(500)]
 fn server_err(req: &Request) -> Template {
-    let mut context = get_base_context();
-    context.insert("uri".to_owned(), req.uri().to_string());
+    let mut context = get_base_context("/");
+    context.kv.insert("uri".to_owned(), req.uri().to_string());
     Template::render(get_template("500"), context)
 }
 

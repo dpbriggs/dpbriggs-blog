@@ -6,6 +6,9 @@ extern crate lazy_static;
 extern crate rocket_contrib;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate log;
+extern crate simple_logger;
 
 mod blog;
 mod context;
@@ -16,6 +19,7 @@ use blog::get_org_mode_files;
 use server::start_server;
 
 fn main() {
+    simple_logger::init_with_level(log::Level::Info).unwrap();
     get_org_mode_files();
     start_server().launch();
 }

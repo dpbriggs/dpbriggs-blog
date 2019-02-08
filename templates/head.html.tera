@@ -8,9 +8,9 @@
 <!-- Highlight JS -->
 <link rel="stylesheet"
       href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.14.1/styles/default.min.css">
-<link rel="stylesheet" href="static/css/dpbriggs.css">
-<link rel="stylesheet" href="static/css/solarized-dark.css">
-<link rel="stylesheet" href="static/css/bootstrap-slate.css">
+<link rel="stylesheet" href="/static/css/dpbriggs.css">
+<link rel="stylesheet" href="/static/css/solarized-dark.css">
+<link rel="stylesheet" href="/static/css/bootstrap-slate.css">
 
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">

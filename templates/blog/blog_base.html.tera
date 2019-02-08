@@ -9,18 +9,8 @@
                   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                       <h6 class="monospace">Recent Articles</h6>
                   </div>
-                  {% if recent_articles %}
-                  <ul class="nav flex-column">
-                      <li class="nav-item">
-                          <a class="nav-link active" href="#">
-                              Neato recent article
-                              <span class="sr-only">(current)</span>
-                          </a>
-                      </li>
-                  </ul>
-                  {% else %}
-                  There's no recent articles to show.
-                  {% endif %}
+                  {% block blogsidebar %}
+                  {% endblock blogsidebar %}
               </ul>
           </div>
         </nav>
