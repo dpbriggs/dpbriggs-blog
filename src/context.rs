@@ -54,7 +54,7 @@ macro_rules! site_context(
 );
 
 lazy_static! {
-    static ref STATIC_BLOG_ENTRIES: OrgBlog = get_org_blog();
+    static ref STATIC_BLOG_ENTRIES: OrgBlog = get_org_blog(BLOG_ROOT);
 }
 
 lazy_static! {

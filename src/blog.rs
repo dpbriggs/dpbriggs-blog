@@ -1,6 +1,6 @@
 extern crate chrono;
 extern crate select;
-use crate::context::BLOG_ROOT;
+
 use chrono::NaiveDate;
 use select::document::Document;
 use select::predicate::{Attr, Class};
@@ -140,6 +140,7 @@ pub fn get_org_mode_files(blog_root: &str) -> Vec<OrgModeHtml> {
                     Err(e) => error!("Failed to parse file {:?}", e),
                 }
             }
+            html_success.sort_by(|a, b| b.date.cmp(&a.date));
             html_success
         }
         Err(e) => {
@@ -149,8 +150,8 @@ pub fn get_org_mode_files(blog_root: &str) -> Vec<OrgModeHtml> {
     }
 }
 
-pub fn get_org_blog() -> OrgBlog {
-    let blog_files = get_org_mode_files(BLOG_ROOT);
+pub fn get_org_blog(blog_root: &str) -> OrgBlog {
+    let blog_files = get_org_mode_files(blog_root);
     let html: HashMap<Slug, OrgModeHtml> = blog_files
         .clone()
         .into_iter()
