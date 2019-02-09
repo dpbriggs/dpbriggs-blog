@@ -3,6 +3,9 @@ use std::collections::HashMap;
 
 use crate::blog::{get_org_blog, OrgBlog, OrgModeHtml};
 
+/// BLOG_ROOT is the relative path to blog
+pub static BLOG_ROOT: &'static str = "blog/";
+
 /// SiteContextKv represents all key-value variables used in
 /// this project.
 ///

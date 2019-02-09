@@ -5,7 +5,7 @@
 <span> {{ base.full_name }} {{ base.web_sep }} {{ base.my_email }} </span>
 <br>
 <br>
-Hi, I'm a software developer and student at the University of Waterloo.
+Hi, I'm a software developer and computer science student at the University of Waterloo.
 I enjoy building out complex applications.
 <br>
 <br>

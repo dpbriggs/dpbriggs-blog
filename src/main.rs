@@ -10,6 +10,9 @@ extern crate serde_derive;
 extern crate log;
 extern crate simple_logger;
 
+#[cfg(test)]
+mod tests;
+
 mod blog;
 mod context;
 mod routes;
