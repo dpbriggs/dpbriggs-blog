@@ -15,11 +15,9 @@ mod context;
 mod routes;
 mod server;
 
-use blog::get_org_mode_files;
 use server::start_server;
 
 fn main() {
     simple_logger::init_with_level(log::Level::Info).unwrap();
-    get_org_mode_files();
     start_server().launch();
 }

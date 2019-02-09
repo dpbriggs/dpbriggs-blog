@@ -12,6 +12,13 @@ use std::path::PathBuf;
 type Slug = String;
 static BLOG_ROOT: &'static str = "blog/";
 
+/// OrgBlog represents all blog related items.
+/// See [OrgBlog](crate::blog::OrgBlog) and
+/// [get_org_blog](crate::blog::get_org_blog).
+///
+/// # Example
+///
+/// let org_blog: OrgBlog = get_org_blog()
 #[derive(Serialize, Debug)]
 pub struct OrgBlog {
     pub html: HashMap<Slug, OrgModeHtml>,
@@ -52,7 +59,6 @@ fn get_html_files() -> Result<Vec<PathBuf>, io::Error> {
             }
         }
     }
-    dbg!(&html_files);
     Ok(html_files)
 }
 
@@ -86,12 +92,11 @@ fn get_html_contents(blog_files: Vec<PathBuf>) -> Vec<OrgModeHtml> {
             .html();
         let html = document.find(Class("outline-2")).next().unwrap().html();
         let blog_string = document.find(Class("outline-2")).next().unwrap().text();
-        dbg!(&blog_string);
         let slug = blog_file
             .into_os_string()
             .into_string()
             .unwrap()
-            .split("/")
+            .split('/')
             .last()
             .unwrap()
             .replace(".html", "");
@@ -105,15 +110,17 @@ fn get_html_contents(blog_files: Vec<PathBuf>) -> Vec<OrgModeHtml> {
         })
     }
 
-    dbg!(&org_mode_files);
-    org_mode_files.sort_by(|a, b| a.date.cmp(&b.date));
+    org_mode_files.sort_by(|a, b| b.date.cmp(&a.date));
     org_mode_files
 }
 
 pub fn get_org_mode_files() -> Vec<OrgModeHtml> {
     match get_html_files() {
         Ok(org) => get_html_contents(org),
-        Err(e) => panic!(e),
+        Err(e) => {
+            error!("Cannot get org mode files!");
+            panic!(e)
+        }
     }
 }
 

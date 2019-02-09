@@ -8,10 +8,20 @@ use crate::context::{get_base_context, get_template};
 use rocket::Catcher;
 use rocket::Route;
 
+// TODO: Get this working one day
+// macro_rules! simple_route {
+//     ($name:ident, $route: expr) => {
+//         #[get($route)]
+//         fn $name() -> Template {
+//             let context = get_base_context($route);
+//             Template::render(get_template($route), context)
+//         }
+//     };
+// }
+
 #[get("/")]
 fn index() -> Template {
     let context = get_base_context("/");
-    dbg!(&context);
     Template::render("index", context)
 }
 

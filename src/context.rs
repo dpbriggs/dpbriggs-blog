@@ -3,15 +3,38 @@ use std::collections::HashMap;
 
 use crate::blog::{get_org_blog, OrgBlog, OrgModeHtml};
 
-pub type SiteContextKv = HashMap<String, String>;
-pub type SiteContextBlog = OrgBlog;
+/// SiteContextKv represents all key-value variables used in
+/// this project.
+///
+/// # Example
+///
+/// let mut foo = SiteContextKv::new()
+/// foo.insert("key".to_owned(), "value".to_owned())
+type SiteContextKv = HashMap<String, String>;
+
+/// TemplateMap adds some indirection between
+/// routes and the actual templates used in the project.
+/// See [get_template](crate::context::get_template).
+///
+/// # Example
+///
+/// let template: &'static str = get_template("/blog")
+/// assert_eq!(template, "blog/blog_root")
 type TemplateMap = HashMap<&'static str, &'static str>;
 
+/// SiteContext represents the entire context required to render
+/// this website. See [get_base_context](crate::context::get_base_context)
 #[derive(Serialize, Debug)]
 pub struct SiteContext<'a> {
+    /// base is the static key-value context of the website.
+    /// All of the information in base comes from
+    /// [STATIC_SITE_CONTEXT_KV](crate::context::STATIC_SITE_CONTEXT_KV)
     pub base: &'static SiteContextKv,
+    /// kv is the dynamic key-value context of the website.
     pub kv: SiteContextKv,
-    pub blog: &'static SiteContextBlog,
+    /// blog is all blog related items, see [OrgBlog](crate::context::OrgBlog)
+    pub blog: &'static OrgBlog,
+    /// curr_blog is the current blog article, if applicable.
     pub curr_blog: Option<&'a OrgModeHtml>,
 }
 
@@ -28,7 +51,7 @@ macro_rules! site_context(
 );
 
 lazy_static! {
-    static ref STATIC_BLOG_ENTRIES: SiteContextBlog = get_org_blog();
+    static ref STATIC_BLOG_ENTRIES: OrgBlog = get_org_blog();
 }
 
 lazy_static! {
@@ -56,6 +79,7 @@ lazy_static! {
     };
 }
 
+/// get_base_context
 pub fn get_base_context(nav_href_uri: &str) -> SiteContext {
     SiteContext {
         base: &STATIC_SITE_CONTEXT_KV,
