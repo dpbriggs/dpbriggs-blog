@@ -146,3 +146,24 @@ ul,li {
     text-transform: uppercase;
 }
 
+.src {
+    background-color: #26282b;
+    padding: 10px;
+    font-family: monospace !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 1rem !important;
+}
+
+.example {
+    background-color: #26282b;
+    padding-left: 10px;
+    padding-top: 10px;
+}
+
+
+code {
+    font-family: monospace !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 1rem !important;
+    color: #009b75 !important;
+}

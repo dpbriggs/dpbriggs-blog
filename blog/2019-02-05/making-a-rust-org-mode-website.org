@@ -1,5 +1,5 @@
 #+AUTHOR: David Briggs
-#+TITLE: Making an Org Mode Blog in Rust
+#+TITLE: Making yo
 #+TAGS: rust tera org-mode
 #+OPTIONS: html-style:nil
 <2019-02-06 Wed>

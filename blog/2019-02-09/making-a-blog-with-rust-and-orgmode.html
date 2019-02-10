@@ -1,0 +1,552 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2019-02-10 Sun 03:14 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Making a Blog with Rust and Org-Mode</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="David Briggs" />
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2019 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Making a Blog with Rust and Org-Mode</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orgff14120">The joys of Rust, Tera, and CSS</a>
+<ul>
+<li><a href="#org00a5de3">Getting Started</a></li>
+<li><a href="#org2b81ee8">Actually Making the Site</a>
+<ul>
+<li><a href="#org0bef232">Representing the website with Rocket/Rust</a></li>
+<li><a href="#orgd778490">Templating With Tera &amp; Bootstrap</a></li>
+<li><a href="#org0379a1c">Production</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+<span class="timestamp-wrapper"><span class="timestamp">&lt;2019-02-09 Sat&gt;</span></span>
+</p>
+
+<div id="outline-container-orgff14120" class="outline-2">
+<h2 id="orgff14120">The joys of Rust, Tera, and CSS</h2>
+<div class="outline-text-2" id="text-orgff14120">
+<p>
+I've been meaning to use the <a href="https://dpbriggs.ca">dpbriggs.ca</a> domain for a while now,
+and I wanted to keep learning Rust, so this blog was born.
+I'm happy with the result, but by god, it was a journey.
+This article will detail the challenges and successes of making this website.
+For reference, it's built with:
+</p>
+
+<ol class="org-ol">
+<li><a href="https://rocket.rs/">Rocket</a> 🚀 (Rust Web Framework)</li>
+<li><a href="https://github.com/Keats/tera">Tera</a> (Fast templating language/engine, similar to Jinja2)</li>
+<li><a href="https://getbootstrap.com/">Bootstrap</a> (CSS framework)</li>
+</ol>
+
+<p>
+And the steps taken, ordered by pain:
+</p>
+<ol class="org-ol">
+<li>Getting the CSS/templates looking right <code>(~5 hours)</code></li>
+<li>Making the rust blog portions and testing them <code>(~4 hours)</code></li>
+<li>Getting Google Cloud Platform/Cloudflare setup <code>(~3 hours)</code></li>
+<li>Learning how Rocket, Bootstrap, and Tera works <code>(~2 hours)</code></li>
+<li>Further modifying emacs to <i>work</i> better <code>(~2 hours)</code></li>
+<li>Setting up my VM, and not fork bombing it <code>(~1 hour)</code></li>
+</ol>
+
+<p>
+So by my estimate, it took about ~17 hours of real work to get it built and deployed.
+If I had spent more time on step 4, the other steps may have gone faster 🤷.
+</p>
+
+<p>
+So, let's get into making the website.
+</p>
+
+<p>
+We'll cover the basics, then model the website in Rust,
+then make the Tera Templates + CSS, and then finally deploy it in production.
+</p>
+</div>
+
+<div id="outline-container-org00a5de3" class="outline-3">
+<h3 id="org00a5de3">Getting Started</h3>
+<div class="outline-text-3" id="text-org00a5de3">
+<p>
+Rocket makes it pretty quick to get a website started. The simplest rocket project would involve:
+</p>
+
+<p>
+0 - Making sure you're on a nightly toolchain:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash">&#10140;  rustup toolchain install nightly
+&#10140;  rustup default nightly
+</pre>
+</div>
+
+<p>
+1 - Making a new project
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash">&#10140;  cargo new my-rocket
+</pre>
+</div>
+
+<p>
+2 - Adding rocket to <code>my-rocket/Cargo.toml</code>
+</p>
+
+<div class="org-src-container">
+<pre class="src src-toml">[<span style="color: #84ffff;">dependencies</span>]
+<span style="color: #ffcc80;">rocket</span> = <span style="color: #9ccc65;">"0.4.0"</span>
+</pre>
+</div>
+
+<p>
+3 - Adding the rocket route &amp; server launch in <code>my-rocket/src/main.rs</code>
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ffd700;">#!</span><span style="color: #e91e63;">[</span><span style="color: #ffd700;">feature</span><span style="color: #2196F3;">(</span><span style="color: #ffd700;">proc_macro_hygiene, decl_macro</span><span style="color: #2196F3;">)</span><span style="color: #e91e63;">]</span>
+<span style="color: #ffd700;">#</span><span style="color: #e91e63;">[</span><span style="color: #ffd700;">macro_use</span><span style="color: #e91e63;">]</span>
+<span style="color: #fff59d;">extern</span> <span style="color: #fff59d;">crate</span> rocket;
+
+<span style="color: #ffd700;">#</span><span style="color: #e91e63;">[</span><span style="color: #ffd700;">get</span><span style="color: #2196F3;">(</span><span style="color: #9ccc65;">"/"</span><span style="color: #2196F3;">)</span><span style="color: #e91e63;">]</span>
+<span style="color: #fff59d;">fn</span> <span style="color: #84ffff;">hello</span><span style="color: #e91e63;">()</span> -&gt; &amp;'<span style="color: #fff59d;">static</span> <span style="color: #84ffff;">str</span> <span style="color: #e91e63;">{</span>
+    <span style="color: #9ccc65;">"Hello, world!"</span>
+<span style="color: #e91e63;">}</span>
+
+<span style="color: #fff59d;">fn</span> <span style="color: #84ffff;">main</span><span style="color: #e91e63;">()</span> <span style="color: #e91e63;">{</span>
+    <span style="color: #8bc34a;">rocket</span>::ignite<span style="color: #2196F3;">()</span>.mount<span style="color: #2196F3;">(</span><span style="color: #9ccc65;">"/"</span>, <span style="color: #ffd700;">routes!</span><span style="color: #EF6C00;">[</span>hello<span style="color: #EF6C00;">]</span><span style="color: #2196F3;">)</span>.launch<span style="color: #2196F3;">()</span>;
+<span style="color: #e91e63;">}</span>
+</pre>
+</div>
+
+<p>
+4 - Running the project (<code>cargo run</code>), and view <code>localhost:8000</code> in a browser (or just curl it) (images aren't supported yet 😅)
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash">&#10140; curl localhost:8000
+Hello, world!%
+</pre>
+</div>
+
+<p>
+(the <code>%</code> is just indicating there's no newline at the end)
+</p>
+</div>
+</div>
+
+<div id="outline-container-org2b81ee8" class="outline-3">
+<h3 id="org2b81ee8">Actually Making the Site</h3>
+<div class="outline-text-3" id="text-org2b81ee8">
+<p>
+There's three pieces to talk about here: Rust/Rocket, Tera/Bootstrap, and Production.
+</p>
+
+<ol class="org-ol">
+<li>For Rust/Rocket, we'll need to figure out how to <b>represent</b> the website, and then <b>wire</b> things together.</li>
+<li>For Tera/Bootsrap, we'll need to figure out to <b>make</b> and <b>style</b> the content.</li>
+<li>For Production, we'll need to figure how to <b>get certs</b> for HTTPS, and how to <b>serve</b> our content.</li>
+</ol>
+
+<p>
+If you just want the code, you can take it from the <a href="https://github.com/dpbriggs/dpbriggs-blog/tree/ea5a970b7bab785ea663d4bd623dbc5527e17c23">first commit</a> of this website.
+</p>
+</div>
+
+<div id="outline-container-org0bef232" class="outline-4">
+<h4 id="org0bef232">Representing the website with Rocket/Rust</h4>
+<div class="outline-text-4" id="text-org0bef232">
+<p>
+As this website is mostly static, this part is pretty easy. There's six easy pieces:
+</p>
+
+<ol class="org-ol">
+<li><code>blog.rs</code> to parse our org HTML files.</li>
+<li><code>context.rs</code> to store all things context (eg. site name, my email, etc).</li>
+<li><code>routes.rs</code> to map URLs to functions.</li>
+<li><code>server.rs</code> to setup rocket &amp; present it to <code>main.rs</code>.</li>
+<li><code>main.rs</code> to be an entrypoint, and start the Rocket server.</li>
+<li><code>tests.rs</code> to test our site and make sure its working right.</li>
+</ol>
+
+<p>
+The <a href="https://github.com/dpbriggs/dpbriggs-blog/tree/master/src">code</a> should be easy enough to understand, but lets look at the most important bit is <code>SiteContext</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ffe4b5;">/// SiteContext represents the entire context required to render</span>
+<span style="color: #ffe4b5;">/// this website. See [get_base_context](crate::context::get_base_context)</span>
+<span style="color: #ffd700;">#</span><span style="color: #e91e63;">[</span><span style="color: #ffd700;">derive</span><span style="color: #2196F3;">(</span><span style="color: #ffd700;">Serialize, Debug</span><span style="color: #2196F3;">)</span><span style="color: #e91e63;">]</span>
+<span style="color: #fff59d;">pub</span> <span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">SiteContext</span><span style="color: #e91e63;">&lt;</span>'<span style="color: #ffcc80;">a</span><span style="color: #e91e63;">&gt;</span> <span style="color: #e91e63;">{</span>
+    <span style="color: #ffe4b5;">/// base is the static key-value context of the website.</span>
+    <span style="color: #ffe4b5;">/// All of the information in base comes from</span>
+    <span style="color: #ffe4b5;">/// [STATIC_SITE_CONTEXT_KV](crate::context::STATIC_SITE_CONTEXT_KV)</span>
+    <span style="color: #fff59d;">pub</span> <span style="color: #ffcc80;">base</span>: &amp;'<span style="color: #fff59d;">static</span> <span style="color: #84ffff;">SiteContextKv</span>,
+    <span style="color: #ffe4b5;">/// kv is the dynamic key-value context of the website.</span>
+    <span style="color: #fff59d;">pub</span> <span style="color: #ffcc80;">kv</span>: <span style="color: #84ffff;">SiteContextKv</span>,
+    <span style="color: #ffe4b5;">/// blog is all blog related items, see [OrgBlog](crate::context::OrgBlog)</span>
+    <span style="color: #fff59d;">pub</span> <span style="color: #ffcc80;">blog</span>: &amp;'<span style="color: #fff59d;">static</span> <span style="color: #84ffff;">OrgBlog</span>,
+    <span style="color: #ffe4b5;">/// curr_blog is the current blog article, if applicable.</span>
+    <span style="color: #fff59d;">pub</span> <span style="color: #ffcc80;">curr_blog</span>: <span style="color: #84ffff;">Option</span><span style="color: #2196F3;">&lt;</span>&amp;'<span style="color: #ffcc80;">a</span> <span style="color: #84ffff;">OrgModeHtml</span><span style="color: #2196F3;">&gt;</span>,
+<span style="color: #e91e63;">}</span>
+</pre>
+</div>
+
+<p>
+An instance of this struct is passed to every page. The page then uses the constituent parts
+to render different things. For example, the links in the navbar at the top use <code>base</code>
+to set the <code>hrefs</code>, and actually link you to other parts of the site.
+</p>
+
+<p>
+Most routes then look like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ffd700;">#</span><span style="color: #e91e63;">[</span><span style="color: #ffd700;">get</span><span style="color: #2196F3;">(</span><span style="color: #9ccc65;">"/blog"</span><span style="color: #2196F3;">)</span><span style="color: #e91e63;">]</span>
+<span style="color: #fff59d;">fn</span> <span style="color: #84ffff;">blog_index</span><span style="color: #e91e63;">()</span> -&gt; <span style="color: #84ffff;">Template</span> <span style="color: #e91e63;">{</span>
+    <span style="color: #fff59d;">let</span> <span style="color: #ffcc80;">context</span> = get_base_context<span style="color: #2196F3;">(</span><span style="color: #9ccc65;">"/blog"</span><span style="color: #2196F3;">)</span>;
+    <span style="color: #84ffff;">Template</span>::render<span style="color: #2196F3;">(</span>get_template<span style="color: #EF6C00;">(</span><span style="color: #9ccc65;">"/blog"</span><span style="color: #EF6C00;">)</span>, context<span style="color: #2196F3;">)</span>
+<span style="color: #e91e63;">}</span>
+</pre>
+</div>
+
+<p>
+We tell rocket to call this function when it sees <code>/blog</code>.
+The function then gets the base context for <code>/blog</code>, and renders the <code>/blog</code> template.
+</p>
+
+<p>
+Note that special care was taken to move most of the <code>David Briggs</code> specific stuff to <code>context.rs</code>.
+So if you want to fork this site, you can do more or less edit that (and the templates).
+</p>
+
+<p>
+As there the org-mode parsing libraries weren't quite what I wanted, I ended up parsing
+the exported org html. I just grab the major sections and stick them into <code>OrgModeHtml</code>.
+Eventually I'll either make my own parser or pray someone else does.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgd778490" class="outline-4">
+<h4 id="orgd778490">Templating With Tera &amp; Bootstrap</h4>
+<div class="outline-text-4" id="text-orgd778490">
+<p>
+Tera is a Django style templating engine for HTML.
+It lets us conditionally render our HTML (among other things).
+This can let do things like underline <i>blog</i> in the navbar above.
+There's a variable which tracks the URL path above and navbar uses it to
+underline the relevant section.
+</p>
+
+
+<p>
+Tera has a bunch of features, but the key ones are:
+</p>
+
+<ol class="org-ol">
+<li>Extending to add/adapt content generically (think: sidebar &amp; main content)</li>
+<li>Including files for always present content (think: HTML head &amp; navbar)</li>
+</ol>
+
+<p>
+Currently, the root document in this website is:
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 1: </span><code>templates/base.html.tera</code></label><pre class="src src-html"><span style="color: #9ccc65;">&lt;!doctype html&gt;</span>
+&lt;<span style="color: #84ffff;">html</span>&gt;
+    &lt;<span style="color: #84ffff;">head</span>&gt;
+        {% include <span style="color: #9ccc65;">"head"</span> %}
+    &lt;/<span style="color: #84ffff;">head</span>&gt;
+    &lt;<span style="color: #84ffff;">body</span>&gt;
+        &lt;<span style="color: #84ffff;">div</span>&gt;
+        &lt;/<span style="color: #84ffff;">div</span>&gt;
+            {% include <span style="color: #9ccc65;">"navbar"</span> %}
+
+            {% block content %}
+            {% endblock content %}
+
+            {% include <span style="color: #9ccc65;">"scripts"</span> %}
+        &lt;/<span style="color: #84ffff;">div</span>&gt;
+    &lt;/<span style="color: #84ffff;">body</span>&gt;
+&lt;/<span style="color: #84ffff;">html</span>&gt;
+</pre>
+</div>
+
+<p>
+We see that <code>head</code>, <code>navbar</code>, and <code>scripts</code> are always present.
+This makes sense for this mostly static website.
+</p>
+
+<p>
+The block <code>content</code> is more interesting.
+It doesn't actually do anything here, but we can extend <code>base.html.tera</code>
+and define the block in other files to add content.
+</p>
+
+<p>
+So lets extend it, by making the skeleton for this blog article:
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 2: </span><code>templates/blog/blog_base.html.tera</code></label><pre class="src src-html">{% extends <span style="color: #9ccc65;">"base"</span> %}
+
+{% block content %}
+&lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"container-fluid blog-font"</span>&gt;
+    &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"row"</span>&gt;
+        &lt;<span style="color: #84ffff;">nav</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"col-md-2 &#8230; whole bunch o css &#8230;"</span>&gt;
+            &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"sidebar-sticky monospace"</span>&gt;
+                &lt;<span style="color: #84ffff;">ul</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"nav flex-column"</span>&gt;
+                    &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"&#8230; whole bunch o css &#8230;"</span>&gt;
+                        {% block blog_sidebar_title %}
+                        {% endblock blog_sidebar_title %}
+                    &lt;/<span style="color: #84ffff;">div</span>&gt;
+                    {% block blogsidebar %}
+                    {% endblock blogsidebar %}
+                &lt;/<span style="color: #84ffff;">ul</span>&gt;
+            &lt;/<span style="color: #84ffff;">div</span>&gt;
+        &lt;/<span style="color: #84ffff;">nav</span>&gt;
+
+        &lt;<span style="color: #84ffff;">main</span> <span style="color: #ffcc80;">role</span>=<span style="color: #9ccc65;">"main"</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"col-md-10 ml-sm-auto col-lg-10 px-4"</span>&gt;
+            &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"&#8230; whole hunch o css &#8230;"</span>&gt;
+                {% block blog_title %}
+                {% endblock blog_title %}
+            &lt;/<span style="color: #84ffff;">div</span>&gt;
+            &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"float-left blog-article"</span>&gt;
+                {% block blogcontent %}
+                {% endblock blogcontent %}
+            &lt;/<span style="color: #84ffff;">div</span>&gt;
+        &lt;/<span style="color: #84ffff;">main</span>&gt;
+    &lt;/<span style="color: #84ffff;">div</span>&gt;
+&lt;/<span style="color: #84ffff;">div</span>&gt;
+{% endblock content %}
+</pre>
+</div>
+
+<p>
+Now, you may be thinking <code>thats a whole lot of spaghetti David</code>, and you're right, but lets read through this.
+</p>
+
+<p>
+First, we <code>extend base</code>, which lets <code>Tera</code> know which file to use when rendering the HTML.
+</p>
+
+<p>
+Next, we redefine <code>{% block content %}</code> so <code>Tera</code> can copy/paste the stuff in it into <code>base.html.tera</code>.
+We use bootstrap here to define two vertical sections (see <code>col-md-2</code> and <code>col-md-10</code>).
+That's the sidebar to the left, and the blog you're currently reading on the right.
+</p>
+
+<p>
+We also define some more blocks, which we'll finally extend to make the blog content:
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 3: </span><code>templates/blog/blog_article.html.tera</code></label><pre class="src src-html">{% extends <span style="color: #9ccc65;">"blog/blog_base"</span> %}
+
+<span style="color: #b0bec5;">&lt;!-- </span><span style="color: #b0bec5;">-------------------- Title -------------------- </span><span style="color: #b0bec5;">--&gt;</span>
+
+{% block blog_title %}
+&lt;<span style="color: #84ffff;">h4</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"monospace"</span>&gt;<span style="text-decoration: underline;">{{ curr_blog.title }} ({{ curr_blog.date }})</span>&lt;/<span style="color: #84ffff;">h4</span>&gt;
+{% endblock blog_title %}
+
+<span style="color: #b0bec5;">&lt;!-- </span><span style="color: #b0bec5;">-------------------- Sidebar -------------------- </span><span style="color: #b0bec5;">--&gt;</span>
+
+{% block blog_sidebar_title %}
+&lt;<span style="color: #84ffff;">h6</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"monospace"</span>&gt;<span style="text-decoration: underline;">Table of Contents </span>&lt;/<span style="color: #84ffff;">h6</span>&gt;
+{% endblock blog_sidebar_title %}
+
+{% block blogsidebar %}
+
+&lt;<span style="color: #84ffff;">ul</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"nav flex-column"</span>&gt;
+    {{ curr_blog.toc | safe }}
+&lt;/<span style="color: #84ffff;">ul</span>&gt;
+
+{% endblock blogsidebar %}
+
+<span style="color: #b0bec5;">&lt;!-- </span><span style="color: #b0bec5;">-------------------- Content -------------------- </span><span style="color: #b0bec5;">--&gt;</span>
+
+{% block blogcontent %}
+
+&lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"container bordered"</span>&gt;
+    {{ curr_blog.html | safe }}
+&lt;/<span style="color: #84ffff;">div</span>&gt;
+
+{% endblock blogcontent %}
+</pre>
+</div>
+
+<p>
+Phew, we've made it. This is the stuff that renders what you're currently reading.
+</p>
+
+<p>
+As before, we are extending another file (<code>blog/blog_base</code>) and filling in blocks.
+</p>
+
+<p>
+The <code>{{ blog.xyz }}</code> bits are variable expansion. Rocket passes a struct containing the information for this blog (we saw this above),
+and we insert it into the document. The <code>{{ xyz | safe }}</code> tells Tera not to escape the HTML given.
+</p>
+
+<p>
+For example, notice how we've filled in <code>blogcontent</code> with <code>{ curr_blog.html | safe }}</code>.
+That's me, you're reading. That's the org-mode HTML main content.
+</p>
+
+<p>
+But that's enough on this topic, lets get this thing in production!
+</p>
+</div>
+</div>
+
+<div id="outline-container-org0379a1c" class="outline-4">
+<h4 id="org0379a1c">Production</h4>
+<div class="outline-text-4" id="text-org0379a1c">
+<p>
+This part is actually pretty easy. I use <a href="https://caddyserver.com/">Caddy</a> to serve the content as it makes getting certs ridiculously easy.
+</p>
+
+<p>
+The entire production configuration is just:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-Caddyfile">dpbriggs.ca www.dpbriggs.ca
+
+gzip
+
+proxy / localhost:8000
+
+tls {
+    dns cloudflare
+}
+</pre>
+</div>
+
+<p>
+The important bits are the first line (<code>dpbriggs.ca www.dpbriggs.ca</code>) and the <code>proxy</code> line.
+</p>
+
+<p>
+Caddy uses the domain along with <a href="https://letsencrypt.org/">Lets Encrypt</a> to get certs for HTTPS.
+It then proxies Rocket, forwarding all request to <code>localhost:8000</code>.
+</p>
+
+<p>
+On the VM I just have two <code>tmux</code> sessions, one which holds Caddy and the other holds Rocket.
+</p>
+
+<p>
+Then the process to deploy the site is:
+</p>
+
+<ol class="org-ol">
+<li><code>cargo test</code> and <code>git push</code></li>
+<li><code>git pull</code> to get the latest stuff</li>
+<li><code>cargo build --release</code></li>
+<li><code>tmux attach -t 0</code> and <code>./run_site.sh</code></li>
+<li><code>tmux attach -t 5</code> and <code>./run_caddy.sh</code></li>
+</ol>
+
+<p>
+I tried at one point to automatically update the website, but the hot-reloading process
+more-or-less fork bombed my server. What would happen is the hot-reload script would <code>git pull</code>
+my website, <code>pkill -USR1 caddy</code> to reload it. But the git stuff takes time and happens in a subprocess,
+so this would end up spawning many, many processes. I actually had to run <code>sudo kill -9 …</code> in a loop to kill them.
+</p>
+
+<p>
+I then ran my website through Googles <a href="https://developers.google.com/speed/pagespeed/insights/">Page Speed Tool</a> and got a lower score, so I setup <a href="https://www.cloudflare.com/en-ca/">CloudFlare</a>.
+The process was surprising easy, and ended up saving me money by not using Googles Cloud DNS.
+I'm now at 96/100, which is good enough for now.
+</p>
+
+<p>
+And we're deployed. That's it ™
+</p>
+
+<p>
+Thanks for reading,
+</p>
+
+<p>
+David Briggs (<code>email@dpbriggs.ca</code>)
+</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: David Briggs</p>
+<p class="date">Created: 2019-02-10 Sun 03:14</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,335 @@
+#+AUTHOR: David Briggs
+#+TITLE: Making a Blog with Rust and Org-Mode
+#+TAGS: rust tera org-mode
+#+OPTIONS: html-style:nil num:nil
+<2019-02-09 Sat>
+#+ATTR_HTML: target="_blank" 
+
+* The joys of Rust, Tera, and CSS
+
+I've been meaning to use the [[https://dpbriggs.ca][dpbriggs.ca]] domain for a while now,
+and I wanted to keep learning Rust, so this blog was born.
+I'm happy with the result, but by god, it was a journey.
+This article will detail the challenges and successes of making this website.
+For reference, it's built with:
+
+1. [[https://rocket.rs/][Rocket]] 🚀 (Rust Web Framework)
+2. [[https://github.com/Keats/tera][Tera]] (Fast templating language/engine, similar to Jinja2)
+3. [[https://getbootstrap.com/][Bootstrap]] (CSS framework)
+
+And the steps taken, ordered by pain:
+1. Getting the CSS/templates looking right =(~5 hours)=
+2. Making the rust blog portions and testing them =(~4 hours)=
+3. Getting Google Cloud Platform/Cloudflare setup =(~3 hours)=
+4. Learning how Rocket, Bootstrap, and Tera works =(~2 hours)=
+5. Further modifying emacs to /work/ better =(~2 hours)=
+6. Setting up my VM, and not fork bombing it =(~1 hour)=
+
+So by my estimate, it took about ~17 hours of real work to get it built and deployed.
+If I had spent more time on step 4, the other steps may have gone faster 🤷.
+
+So, let's get into making the website.
+
+We'll cover the basics, then model the website in Rust,
+then make the Tera Templates + CSS, and then finally deploy it in production.
+
+** Getting Started
+
+Rocket makes it pretty quick to get a website started. The simplest rocket project would involve:
+
+0 - Making sure you're on a nightly toolchain:
+
+#+begin_src bash
+ ➜  rustup toolchain install nightly
+ ➜  rustup default nightly
+#+end_src
+
+1 - Making a new project
+
+#+begin_src bash
+ ➜  cargo new my-rocket
+#+end_src
+
+2 - Adding rocket to =my-rocket/Cargo.toml=
+
+#+begin_src toml
+[dependencies]
+rocket = "0.4.0"
+#+end_src
+
+3 - Adding the rocket route & server launch in =my-rocket/src/main.rs=
+
+#+begin_src rust
+#![feature(proc_macro_hygiene, decl_macro)]
+#[macro_use]
+extern crate rocket;
+
+#[get("/")]
+fn hello() -> &'static str {
+    "Hello, world!"
+}
+
+fn main() {
+    rocket::ignite().mount("/", routes![hello]).launch();
+}
+#+end_src
+
+4 - Running the project (=cargo run=), and view =localhost:8000= in a browser (or just curl it) (images aren't supported yet 😅)
+
+#+begin_src bash
+➜ curl localhost:8000
+Hello, world!%
+#+end_src
+
+(the =%= is just indicating there's no newline at the end)
+
+** Actually Making the Site
+
+There's three pieces to talk about here: Rust/Rocket, Tera/Bootstrap, and Production.
+
+1. For Rust/Rocket, we'll need to figure out how to *represent* the website, and then *wire* things together.
+2. For Tera/Bootsrap, we'll need to figure out to *make* and *style* the content.
+3. For Production, we'll need to figure how to *get certs* for HTTPS, and how to *serve* our content.
+
+If you just want the code, you can take it from the [[https://github.com/dpbriggs/dpbriggs-blog/tree/ea5a970b7bab785ea663d4bd623dbc5527e17c23][first commit]] of this website.
+
+*** Representing the website with Rocket/Rust
+
+As this website is mostly static, this part is pretty easy. There's six easy pieces:
+
+1. =blog.rs= to parse our org HTML files.
+2. =context.rs= to store all things context (eg. site name, my email, etc).
+3. =routes.rs= to map URLs to functions.
+4. =server.rs= to setup rocket & present it to =main.rs=.
+5. =main.rs= to be an entrypoint, and start the Rocket server.
+6. =tests.rs= to test our site and make sure its working right.
+
+The [[https://github.com/dpbriggs/dpbriggs-blog/tree/master/src][code]] should be easy enough to understand, but lets look at the most important bit is =SiteContext=:
+
+#+begin_src rust
+/// SiteContext represents the entire context required to render
+/// this website. See [get_base_context](crate::context::get_base_context)
+#[derive(Serialize, Debug)]
+pub struct SiteContext<'a> {
+    /// base is the static key-value context of the website.
+    /// All of the information in base comes from
+    /// [STATIC_SITE_CONTEXT_KV](crate::context::STATIC_SITE_CONTEXT_KV)
+    pub base: &'static SiteContextKv,
+    /// kv is the dynamic key-value context of the website.
+    pub kv: SiteContextKv,
+    /// blog is all blog related items, see [OrgBlog](crate::context::OrgBlog)
+    pub blog: &'static OrgBlog,
+    /// curr_blog is the current blog article, if applicable.
+    pub curr_blog: Option<&'a OrgModeHtml>,
+}
+#+end_src
+
+An instance of this struct is passed to every page. The page then uses the constituent parts
+to render different things. For example, the links in the navbar at the top use =base=
+to set the =hrefs=, and actually link you to other parts of the site.
+
+Most routes then look like this:
+
+#+begin_src rust
+#[get("/blog")]
+fn blog_index() -> Template {
+    let context = get_base_context("/blog");
+    Template::render(get_template("/blog"), context)
+}
+#+end_src
+
+We tell rocket to call this function when it sees =/blog=.
+The function then gets the base context for =/blog=, and renders the =/blog= template.
+
+Note that special care was taken to move most of the =David Briggs= specific stuff to =context.rs=.
+So if you want to fork this site, you can do more or less edit that (and the templates).
+
+As there the org-mode parsing libraries weren't quite what I wanted, I ended up parsing
+the exported org html. I just grab the major sections and stick them into =OrgModeHtml=.
+Eventually I'll either make my own parser or pray someone else does.
+
+*** Templating With Tera & Bootstrap
+
+Tera is a Django style templating engine for HTML.
+It lets us conditionally render our HTML (among other things).
+This can let do things like underline /blog/ in the navbar above.
+There's a variable which tracks the URL path above and navbar uses it to
+underline the relevant section.
+
+
+Tera has a bunch of features, but the key ones are:
+
+1. Extending to add/adapt content generically (think: sidebar & main content)
+2. Including files for always present content (think: HTML head & navbar)
+
+Currently, the root document in this website is:
+
+#+CAPTION: =templates/base.html.tera=
+#+begin_src html
+<!doctype html>
+<html>
+    <head>
+        {% include "head" %}
+    </head>
+    <body>
+        <div>
+        </div>
+            {% include "navbar" %}
+
+            {% block content %}
+            {% endblock content %}
+
+            {% include "scripts" %}
+        </div>
+    </body>
+</html>
+#+end_src
+
+We see that =head=, =navbar=, and =scripts= are always present.
+This makes sense for this mostly static website.
+
+The block =content= is more interesting.
+It doesn't actually do anything here, but we can extend =base.html.tera=
+and define the block in other files to add content.
+
+So lets extend it, by making the skeleton for this blog article:
+
+#+CAPTION: =templates/blog/blog_base.html.tera=
+#+begin_src html
+{% extends "base" %}
+
+{% block content %}
+<div class="container-fluid blog-font">
+    <div class="row">
+        <nav class="col-md-2 … whole bunch o css …">
+            <div class="sidebar-sticky monospace">
+                <ul class="nav flex-column">
+                    <div class="… whole bunch o css …">
+                        {% block blog_sidebar_title %}
+                        {% endblock blog_sidebar_title %}
+                    </div>
+                    {% block blogsidebar %}
+                    {% endblock blogsidebar %}
+                </ul>
+            </div>
+        </nav>
+
+        <main role="main" class="col-md-10 ml-sm-auto col-lg-10 px-4">
+            <div class="… whole hunch o css …">
+                {% block blog_title %}
+                {% endblock blog_title %}
+            </div>
+            <div class="float-left blog-article">
+                {% block blogcontent %}
+                {% endblock blogcontent %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock content %}
+#+end_src
+
+Now, you may be thinking =thats a whole lot of spaghetti David=, and you're right, but lets read through this.
+
+First, we =extend base=, which lets =Tera= know which file to use when rendering the HTML.
+
+Next, we redefine ={% block content %}= so =Tera= can copy/paste the stuff in it into =base.html.tera=.
+We use bootstrap here to define two vertical sections (see =col-md-2= and =col-md-10=).
+That's the sidebar to the left, and the blog you're currently reading on the right.
+
+We also define some more blocks, which we'll finally extend to make the blog content:
+
+#+CAPTION: =templates/blog/blog_article.html.tera=
+#+begin_src html
+  {% extends "blog/blog_base" %}
+
+  <!-- -------------------- Title -------------------- -->
+
+  {% block blog_title %}
+  <h4 class="monospace">{{ curr_blog.title }} ({{ curr_blog.date }})</h4>
+  {% endblock blog_title %}
+
+  <!-- -------------------- Sidebar -------------------- -->
+
+  {% block blog_sidebar_title %}
+  <h6 class="monospace">Table of Contents </h6>
+  {% endblock blog_sidebar_title %}
+
+  {% block blogsidebar %}
+
+  <ul class="nav flex-column">
+      {{ curr_blog.toc | safe }}
+  </ul>
+
+  {% endblock blogsidebar %}
+
+  <!-- -------------------- Content -------------------- -->
+
+  {% block blogcontent %}
+
+  <div class="container bordered">
+      {{ curr_blog.html | safe }}
+  </div>
+
+  {% endblock blogcontent %}
+#+end_src
+
+Phew, we've made it. This is the stuff that renders what you're currently reading.
+
+As before, we are extending another file (=blog/blog_base=) and filling in blocks.
+
+The ={{ blog.xyz }}= bits are variable expansion. Rocket passes a struct containing the information for this blog (we saw this above),
+and we insert it into the document. The ={{ xyz | safe }}= tells Tera not to escape the HTML given.
+
+For example, notice how we've filled in =blogcontent= with ={ curr_blog.html | safe }}=.
+That's me, you're reading. That's the org-mode HTML main content.
+
+But that's enough on this topic, lets get this thing in production!
+
+*** Production
+
+This part is actually pretty easy. I use [[https://caddyserver.com/][Caddy]] to serve the content as it makes getting certs ridiculously easy.
+
+The entire production configuration is just:
+
+#+begin_src Caddyfile
+dpbriggs.ca www.dpbriggs.ca
+
+gzip
+
+proxy / localhost:8000
+
+tls {
+    dns cloudflare
+}
+#+end_src
+
+The important bits are the first line (=dpbriggs.ca www.dpbriggs.ca=) and the =proxy= line.
+
+Caddy uses the domain along with [[https://letsencrypt.org/][Lets Encrypt]] to get certs for HTTPS.
+It then proxies Rocket, forwarding all request to =localhost:8000=.
+
+On the VM I just have two =tmux= sessions, one which holds Caddy and the other holds Rocket.
+
+Then the process to deploy the site is:
+
+1. =cargo test= and =git push=
+2. =git pull= to get the latest stuff 
+3. =cargo build --release=
+4. =tmux attach -t 0= and =./run_site.sh=
+5. =tmux attach -t 5= and =./run_caddy.sh=
+
+I tried at one point to automatically update the website, but the hot-reloading process
+more-or-less fork bombed my server. What would happen is the hot-reload script would =git pull=
+my website, =pkill -USR1 caddy= to reload it. But the git stuff takes time and happens in a subprocess,
+so this would end up spawning many, many processes. I actually had to run =sudo kill -9 …= in a loop to kill them.
+
+I then ran my website through Googles [[https://developers.google.com/speed/pagespeed/insights/][Page Speed Tool]] and got a lower score, so I setup [[https://www.cloudflare.com/en-ca/][CloudFlare]].
+The process was surprising easy, and ended up saving me money by not using Googles Cloud DNS.
+I'm now at 96/100, which is good enough for now.
+
+And we're deployed. That's it ™
+
+Thanks for reading,
+
+David Briggs (=email@dpbriggs.ca=)

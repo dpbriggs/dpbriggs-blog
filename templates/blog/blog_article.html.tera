@@ -3,14 +3,14 @@
 <!-- -------------------- Title -------------------- -->
 
 {% block blog_title %}
-<h4 class="monospace">{{ curr_blog.title }}</h4>
+<h4 class="monospace">{{ curr_blog.title }} ({{ curr_blog.date }})</h4>
 {% endblock blog_title %}
 
 
 <!-- -------------------- Sidebar -------------------- -->
 
 {% block blog_sidebar_title %}
-<h6 class="monospace">Table of Contents</h6>
+<h6 class="monospace">Table of Contents </h6>
 {% endblock blog_sidebar_title %}
 
 {% block blogsidebar %}

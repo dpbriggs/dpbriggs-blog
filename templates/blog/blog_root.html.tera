@@ -15,8 +15,8 @@
 <ul class="nav flex-column">
     {% for blog in blog.blog_files %}
     <li class="nav-item">
-        <a class="nav-link active" href="{{ base.blog_uri}}/{{blog.slug}}">
-            {{ blog.title }}
+        <a href="{{ base.blog_uri}}/{{blog.slug}}">
+            - {{ blog.title }}
             <span class="sr-only">(current)</span>
         </a>
     </li>
@@ -45,6 +45,7 @@ No articles... yet!
         </div>
         ... <a href="{{ base.blog_uri }}/{{blog.slug}}">Continue Reading<span class="sr-only">(current)</span></a>
     </div>
+    <hr/>
   {% endfor %}
 </div>
 {% endif %}
