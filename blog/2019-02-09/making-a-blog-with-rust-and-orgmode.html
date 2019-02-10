@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2019-02-10 Sun 03:14 -->
+<!-- 2019-02-10 Sun 03:48 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Making a Blog with Rust and Org-Mode</title>
@@ -63,14 +63,14 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orgff14120">The joys of Rust, Tera, and CSS</a>
+<li><a href="#org9204998">The joys of Rust, Tera, and CSS</a>
 <ul>
-<li><a href="#org00a5de3">Getting Started</a></li>
-<li><a href="#org2b81ee8">Actually Making the Site</a>
+<li><a href="#org2fe6f68">Getting Started</a></li>
+<li><a href="#orgd67e6b1">Actually Making the Site</a>
 <ul>
-<li><a href="#org0bef232">Representing the website with Rocket/Rust</a></li>
-<li><a href="#orgd778490">Templating With Tera &amp; Bootstrap</a></li>
-<li><a href="#org0379a1c">Production</a></li>
+<li><a href="#org9ead13c">Representing the website with Rocket/Rust</a></li>
+<li><a href="#orgb92bb86">Templating With Tera &amp; Bootstrap</a></li>
+<li><a href="#org43b16be">Production</a></li>
 </ul>
 </li>
 </ul>
@@ -82,9 +82,9 @@ for the JavaScript code in this tag.
 <span class="timestamp-wrapper"><span class="timestamp">&lt;2019-02-09 Sat&gt;</span></span>
 </p>
 
-<div id="outline-container-orgff14120" class="outline-2">
-<h2 id="orgff14120">The joys of Rust, Tera, and CSS</h2>
-<div class="outline-text-2" id="text-orgff14120">
+<div id="outline-container-org9204998" class="outline-2">
+<h2 id="org9204998">The joys of Rust, Tera, and CSS</h2>
+<div class="outline-text-2" id="text-org9204998">
 <p>
 I've been meaning to use the <a href="https://dpbriggs.ca">dpbriggs.ca</a> domain for a while now,
 and I wanted to keep learning Rust, so this blog was born.
@@ -126,9 +126,9 @@ then make the Tera Templates + CSS, and then finally deploy it in production.
 </p>
 </div>
 
-<div id="outline-container-org00a5de3" class="outline-3">
-<h3 id="org00a5de3">Getting Started</h3>
-<div class="outline-text-3" id="text-org00a5de3">
+<div id="outline-container-org2fe6f68" class="outline-3">
+<h3 id="org2fe6f68">Getting Started</h3>
+<div class="outline-text-3" id="text-org2fe6f68">
 <p>
 Rocket makes it pretty quick to get a website started. The simplest rocket project would involve:
 </p>
@@ -198,9 +198,9 @@ Hello, world!%
 </div>
 </div>
 
-<div id="outline-container-org2b81ee8" class="outline-3">
-<h3 id="org2b81ee8">Actually Making the Site</h3>
-<div class="outline-text-3" id="text-org2b81ee8">
+<div id="outline-container-orgd67e6b1" class="outline-3">
+<h3 id="orgd67e6b1">Actually Making the Site</h3>
+<div class="outline-text-3" id="text-orgd67e6b1">
 <p>
 There's three pieces to talk about here: Rust/Rocket, Tera/Bootstrap, and Production.
 </p>
@@ -216,9 +216,9 @@ If you just want the code, you can take it from the <a href="https://github.com/
 </p>
 </div>
 
-<div id="outline-container-org0bef232" class="outline-4">
-<h4 id="org0bef232">Representing the website with Rocket/Rust</h4>
-<div class="outline-text-4" id="text-org0bef232">
+<div id="outline-container-org9ead13c" class="outline-4">
+<h4 id="org9ead13c">Representing the website with Rocket/Rust</h4>
+<div class="outline-text-4" id="text-org9ead13c">
 <p>
 As this website is mostly static, this part is pretty easy. There's six easy pieces:
 </p>
@@ -292,13 +292,13 @@ Eventually I'll either make my own parser or pray someone else does.
 </div>
 </div>
 
-<div id="outline-container-orgd778490" class="outline-4">
-<h4 id="orgd778490">Templating With Tera &amp; Bootstrap</h4>
-<div class="outline-text-4" id="text-orgd778490">
+<div id="outline-container-orgb92bb86" class="outline-4">
+<h4 id="orgb92bb86">Templating With Tera &amp; Bootstrap</h4>
+<div class="outline-text-4" id="text-orgb92bb86">
 <p>
-Tera is a Django style templating engine for HTML.
+Tera is a django style templating engine for HTML.
 It lets us conditionally render our HTML (among other things).
-This can let do things like underline <i>blog</i> in the navbar above.
+This can let us do things like underline <i>blog</i> in the navbar above.
 There's a variable which tracks the URL path above and navbar uses it to
 underline the relevant section.
 </p>
@@ -309,8 +309,8 @@ Tera has a bunch of features, but the key ones are:
 </p>
 
 <ol class="org-ol">
-<li>Extending to add/adapt content generically (think: sidebar &amp; main content)</li>
-<li>Including files for always present content (think: HTML head &amp; navbar)</li>
+<li>Extending templates to add/adapt content generically (think: sidebar &amp; main content)</li>
+<li>Including templates for always present content (think: HTML head &amp; navbar)</li>
 </ol>
 
 <p>
@@ -465,9 +465,9 @@ But that's enough on this topic, lets get this thing in production!
 </div>
 </div>
 
-<div id="outline-container-org0379a1c" class="outline-4">
-<h4 id="org0379a1c">Production</h4>
-<div class="outline-text-4" id="text-org0379a1c">
+<div id="outline-container-org43b16be" class="outline-4">
+<h4 id="org43b16be">Production</h4>
+<div class="outline-text-4" id="text-org43b16be">
 <p>
 This part is actually pretty easy. I use <a href="https://caddyserver.com/">Caddy</a> to serve the content as it makes getting certs ridiculously easy.
 </p>
@@ -545,7 +545,7 @@ David Briggs (<code>email@dpbriggs.ca</code>)
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: David Briggs</p>
-<p class="date">Created: 2019-02-10 Sun 03:14</p>
+<p class="date">Created: 2019-02-10 Sun 03:48</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
