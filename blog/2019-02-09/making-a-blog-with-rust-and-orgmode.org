@@ -150,17 +150,17 @@ Eventually I'll either make my own parser or pray someone else does.
 
 *** Templating With Tera & Bootstrap
 
-Tera is a Django style templating engine for HTML.
+Tera is a django style templating engine for HTML.
 It lets us conditionally render our HTML (among other things).
-This can let do things like underline /blog/ in the navbar above.
+This can let us do things like underline /blog/ in the navbar above.
 There's a variable which tracks the URL path above and navbar uses it to
 underline the relevant section.
 
 
 Tera has a bunch of features, but the key ones are:
 
-1. Extending to add/adapt content generically (think: sidebar & main content)
-2. Including files for always present content (think: HTML head & navbar)
+1. Extending templates to add/adapt content generically (think: sidebar & main content)
+2. Including templates for always present content (think: HTML head & navbar)
 
 Currently, the root document in this website is:
 
