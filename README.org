@@ -1,6 +1,7 @@
 #+AUTHOR: David Briggs <email@dpbriggs.ca>
 
 * dpbriggs.ca
+[[https://travis-ci.org/dpbriggs/dpbriggs-blog.svg?branch=master][https://travis-ci.org/dpbriggs/dpbriggs-blog.svg?branch=master]]
 
 This repository holds my personal website [[https://dpbriggs.ca][dpbriggs.ca]].
 
@@ -13,11 +14,6 @@ Built with:
 - [[https://rocket.rs/][Rocket]] 🚀 (Rust Web Framework)
 - [[https://github.com/Keats/tera][Tera]] (Fast templating language/engine, similar to Jinja2)
 - [[https://getbootstrap.com/][Bootstrap]] (CSS framework)
-
-Items left to build:
-- [ ] Org mode blogging
-- [ ] Blog root page
-- [ ] Org mode blog pages & CSS
 
 
 ** Running the website locally (development)
@@ -32,4 +28,11 @@ Running the website locally is pretty easy, thanks to =cargo= and =rustup=.
 6. (optional) rename the project (replace =myname= with whatever you want):
    - =mv dpbriggs-blog myname-blog=
    - Edit =Cargo.toml= and change instances of =dpbriggs= in there to =myname=
-   - Edit =src/main.rs= and update the default site context.
+   - Edit =src/context.rs= and update the default site context.
+
+Alternatively, use the make file:
+
+#+begin_example
+make watch # live-reload 
+make test  # run tests
+#+end_example
