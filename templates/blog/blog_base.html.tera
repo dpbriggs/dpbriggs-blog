@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container-fluid blog-font">
     <div class="row">
-        <nav class="col-md-2 ml-sm-auto col-sm-2 d-md-block bg-light sidebar d-none px-4 light-padding">
+        <nav class="col-md-3 ml-sm-auto col-sm-2 d-md-block bg-light sidebar d-none px-4 light-padding">
             <div class="sidebar-sticky monospace">
                 <ul class="nav flex-column">
                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -16,7 +16,7 @@
             </div>
         </nav>
 
-        <main role="main" class="col-md-10 ml-sm-auto col-lg-10 px-4">
+        <main role="main" class="col-md-9 ml-sm-auto px-4">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 {% block blog_title %}
                 {% endblock blog_title %}

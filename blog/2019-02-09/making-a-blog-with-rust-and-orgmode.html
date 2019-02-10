@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2019-02-10 Sun 03:48 -->
+<!-- 2019-02-10 Sun 13:33 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Making a Blog with Rust and Org-Mode</title>
@@ -63,14 +63,14 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org9204998">The joys of Rust, Tera, and CSS</a>
+<li><a href="#orgf3ab434">The joys of Rust, Tera, and CSS</a>
 <ul>
-<li><a href="#org2fe6f68">Getting Started</a></li>
-<li><a href="#orgd67e6b1">Actually Making the Site</a>
+<li><a href="#orgc185981">Getting Started</a></li>
+<li><a href="#orgcc13451">Actually Making the Site</a>
 <ul>
-<li><a href="#org9ead13c">Representing the website with Rocket/Rust</a></li>
-<li><a href="#orgb92bb86">Templating With Tera &amp; Bootstrap</a></li>
-<li><a href="#org43b16be">Production</a></li>
+<li><a href="#org62fa9e3">Representing the website with Rocket/Rust</a></li>
+<li><a href="#orgc0e7ea8">Templating With Tera &amp; Bootstrap</a></li>
+<li><a href="#org3a6008a">Production</a></li>
 </ul>
 </li>
 </ul>
@@ -82,9 +82,9 @@ for the JavaScript code in this tag.
 <span class="timestamp-wrapper"><span class="timestamp">&lt;2019-02-09 Sat&gt;</span></span>
 </p>
 
-<div id="outline-container-org9204998" class="outline-2">
-<h2 id="org9204998">The joys of Rust, Tera, and CSS</h2>
-<div class="outline-text-2" id="text-org9204998">
+<div id="outline-container-orgf3ab434" class="outline-2">
+<h2 id="orgf3ab434">The joys of Rust, Tera, and CSS</h2>
+<div class="outline-text-2" id="text-orgf3ab434">
 <p>
 I've been meaning to use the <a href="https://dpbriggs.ca">dpbriggs.ca</a> domain for a while now,
 and I wanted to keep learning Rust, so this blog was born.
@@ -126,9 +126,9 @@ then make the Tera Templates + CSS, and then finally deploy it in production.
 </p>
 </div>
 
-<div id="outline-container-org2fe6f68" class="outline-3">
-<h3 id="org2fe6f68">Getting Started</h3>
-<div class="outline-text-3" id="text-org2fe6f68">
+<div id="outline-container-orgc185981" class="outline-3">
+<h3 id="orgc185981">Getting Started</h3>
+<div class="outline-text-3" id="text-orgc185981">
 <p>
 Rocket makes it pretty quick to get a website started. The simplest rocket project would involve:
 </p>
@@ -198,9 +198,9 @@ Hello, world!%
 </div>
 </div>
 
-<div id="outline-container-orgd67e6b1" class="outline-3">
-<h3 id="orgd67e6b1">Actually Making the Site</h3>
-<div class="outline-text-3" id="text-orgd67e6b1">
+<div id="outline-container-orgcc13451" class="outline-3">
+<h3 id="orgcc13451">Actually Making the Site</h3>
+<div class="outline-text-3" id="text-orgcc13451">
 <p>
 There's three pieces to talk about here: Rust/Rocket, Tera/Bootstrap, and Production.
 </p>
@@ -216,9 +216,9 @@ If you just want the code, you can take it from the <a href="https://github.com/
 </p>
 </div>
 
-<div id="outline-container-org9ead13c" class="outline-4">
-<h4 id="org9ead13c">Representing the website with Rocket/Rust</h4>
-<div class="outline-text-4" id="text-org9ead13c">
+<div id="outline-container-org62fa9e3" class="outline-4">
+<h4 id="org62fa9e3">Representing the website with Rocket/Rust</h4>
+<div class="outline-text-4" id="text-org62fa9e3">
 <p>
 As this website is mostly static, this part is pretty easy. There's six easy pieces:
 </p>
@@ -292,9 +292,9 @@ Eventually I'll either make my own parser or pray someone else does.
 </div>
 </div>
 
-<div id="outline-container-orgb92bb86" class="outline-4">
-<h4 id="orgb92bb86">Templating With Tera &amp; Bootstrap</h4>
-<div class="outline-text-4" id="text-orgb92bb86">
+<div id="outline-container-orgc0e7ea8" class="outline-4">
+<h4 id="orgc0e7ea8">Templating With Tera &amp; Bootstrap</h4>
+<div class="outline-text-4" id="text-orgc0e7ea8">
 <p>
 Tera is a django style templating engine for HTML.
 It lets us conditionally render our HTML (among other things).
@@ -359,7 +359,7 @@ So lets extend it, by making the skeleton for this blog article:
 {% block content %}
 &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"container-fluid blog-font"</span>&gt;
     &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"row"</span>&gt;
-        &lt;<span style="color: #84ffff;">nav</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"col-md-2 &#8230; whole bunch o css &#8230;"</span>&gt;
+        &lt;<span style="color: #84ffff;">nav</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"col-md-3 &#8230; whole bunch o css &#8230;"</span>&gt;
             &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"sidebar-sticky monospace"</span>&gt;
                 &lt;<span style="color: #84ffff;">ul</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"nav flex-column"</span>&gt;
                     &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"&#8230; whole bunch o css &#8230;"</span>&gt;
@@ -372,7 +372,7 @@ So lets extend it, by making the skeleton for this blog article:
             &lt;/<span style="color: #84ffff;">div</span>&gt;
         &lt;/<span style="color: #84ffff;">nav</span>&gt;
 
-        &lt;<span style="color: #84ffff;">main</span> <span style="color: #ffcc80;">role</span>=<span style="color: #9ccc65;">"main"</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"col-md-10 ml-sm-auto col-lg-10 px-4"</span>&gt;
+        &lt;<span style="color: #84ffff;">main</span> <span style="color: #ffcc80;">role</span>=<span style="color: #9ccc65;">"main"</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"col-md-9 ml-sm-auto px-4"</span>&gt;
             &lt;<span style="color: #84ffff;">div</span> <span style="color: #ffcc80;">class</span>=<span style="color: #9ccc65;">"&#8230; whole hunch o css &#8230;"</span>&gt;
                 {% block blog_title %}
                 {% endblock blog_title %}
@@ -465,9 +465,9 @@ But that's enough on this topic, lets get this thing in production!
 </div>
 </div>
 
-<div id="outline-container-org43b16be" class="outline-4">
-<h4 id="org43b16be">Production</h4>
-<div class="outline-text-4" id="text-org43b16be">
+<div id="outline-container-org3a6008a" class="outline-4">
+<h4 id="org3a6008a">Production</h4>
+<div class="outline-text-4" id="text-org3a6008a">
 <p>
 This part is actually pretty easy. I use <a href="https://caddyserver.com/">Caddy</a> to serve the content as it makes getting certs ridiculously easy.
 </p>
@@ -545,7 +545,7 @@ David Briggs (<code>email@dpbriggs.ca</code>)
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: David Briggs</p>
-<p class="date">Created: 2019-02-10 Sun 03:48</p>
+<p class="date">Created: 2019-02-10 Sun 13:33</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

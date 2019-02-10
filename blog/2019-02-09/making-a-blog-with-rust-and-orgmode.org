@@ -201,7 +201,7 @@ So lets extend it, by making the skeleton for this blog article:
 {% block content %}
 <div class="container-fluid blog-font">
     <div class="row">
-        <nav class="col-md-2 … whole bunch o css …">
+        <nav class="col-md-3 … whole bunch o css …">
             <div class="sidebar-sticky monospace">
                 <ul class="nav flex-column">
                     <div class="… whole bunch o css …">
@@ -214,7 +214,7 @@ So lets extend it, by making the skeleton for this blog article:
             </div>
         </nav>
 
-        <main role="main" class="col-md-10 ml-sm-auto col-lg-10 px-4">
+        <main role="main" class="col-md-9 ml-sm-auto px-4">
             <div class="… whole hunch o css …">
                 {% block blog_title %}
                 {% endblock blog_title %}
