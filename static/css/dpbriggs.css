@@ -12,7 +12,7 @@ h1,h2,h3,h4 {
 
 .blog-card {
     max-height: 250px;
-    display: inline-block
+    display: block;
 }
 
 ul,li {
