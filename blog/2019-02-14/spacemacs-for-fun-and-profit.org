@@ -330,7 +330,7 @@ So the sequence =ysiw)= would say "Surround (in) this word with ()". Eg. =Hello 
 
 *** Macros
 
-=Vim=/=Emacs= macros are a life saver. This is very similar to an Excel macro, if you've used one.
+=Vim/Emacs= macros are a life saver. This is very similar to an Excel macro, if you've used one.
 
 You start recording a macro with the grammar =q<reg>=, where =reg= is a vim register (I'll get to that).
 Generally people use =qq= (store macro in the =q= reg). You record some actions, then store in that register.
@@ -344,7 +344,7 @@ For example, you can quickly convert a json object to a list of variables with a
    "baz": "yaz"
    "haz": "bab"
 }
-//-> qq v$ ds" s/:/ =/ j q
+//-> qq ds" v$ s/:/ =/ j q
 //-> 2@q
 //-> This will transform into
 {
@@ -369,7 +369,7 @@ I personally don't use registers much after I discovered =Spacemacs= had a paste
 
 *** Marks
 
-Sometimes you're editing a super large file, and you need to keep coming back to the same stop. 
+Sometimes you're editing a super large file, and you need to keep coming back to the same area. 
 You could guesstimate where it'll be by jumping to its line =415gg=, or you could search for it.
 
 A better, more stable way is with marks. You mark a location with =m<reg>=, edit somewhere else, and jump back with =`<reg>=.
@@ -380,11 +380,12 @@ to with =`A=.
 Like before, vim automatically populates the anonymous register =`= with the last cursor location. So if you jump to the end of a file with =G=,
 jump back with =``=.
 
-Similarly, =CTRL-o= will undo your search history. So you jump three files deep finding something, use =CTRL-o= to jump backward through your navigation history.
+Similarly, =CTRL-o= will undo your navigation history. So you jump three files deep finding something, use =CTRL-o= to jump backward through your navigation history.
 
 *** Undo-Tree
 
-Have you ever =CTRL+z='d a bunch of things, wrote some more stuff, and realized you needed something undid?
+Have you ever =CTRL+z='d a bunch of things, wrote some more stuff, 
+and realized you needed something you undid?
 
 Most editors have a linear undo-redo history. Not emacs with =undo-tree= (which =Spacemacs= comes with).
 
