@@ -1,0 +1,731 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2019-02-14 Thu 23:17 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Spacemacs for Fun and Profit</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="David Briggs" />
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2019 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Spacemacs for Fun and Profit</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org077b72c">Spacemacs for Fun and Profit</a>
+<ul>
+<li><a href="#org37fbde4">Getting My Feet Wet</a></li>
+<li><a href="#org3940a8e">What's So Special About Spacemacs?</a></li>
+<li><a href="#org9035276">The Modal Model of Editing</a>
+<ul>
+<li><a href="#org175eea3">Deleting some words</a></li>
+<li><a href="#org955eb81">Visually manipulating stuff</a></li>
+<li><a href="#org608baec">Visual-Block mode to quickly edit parallel text</a></li>
+</ul>
+</li>
+<li><a href="#org95b9e2c">More Nice Things About Spacemacs</a></li>
+<li><a href="#org0454242">Extra Reasons to Love Emacs</a>
+<ul>
+<li><a href="#org806a566">Org-Mode</a></li>
+<li><a href="#orgbca313c">Magit</a></li>
+</ul>
+</li>
+<li><a href="#org1d23839">More Advanced Text Editing techniques / General Cool Things</a>
+<ul>
+<li><a href="#orgfc205e1">vim-surround</a></li>
+<li><a href="#orga9e89fd">Macros</a></li>
+<li><a href="#org78eb6b4">Registers</a></li>
+<li><a href="#org2ea2923">Marks</a></li>
+<li><a href="#org52092d0">Undo-Tree</a></li>
+<li><a href="#org47fb4ec">Projectile-*</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+<span class="timestamp-wrapper"><span class="timestamp">&lt;2019-02-14 Thu&gt;</span></span>
+</p>
+
+
+<div id="outline-container-org077b72c" class="outline-2">
+<h2 id="org077b72c">Spacemacs for Fun and Profit</h2>
+<div class="outline-text-2" id="text-org077b72c">
+<p>
+I've been using <a href="https://github.com/syl20bnr/spacemacs">Spacemacs</a> for a few years, and emacs for a few years before that.
+If you're not familiar with <code>Spacemacs</code>, it's an emacs/vim hybrid thing with a functional setup system.
+You can use it to edit text, code, email, play tetris, use <code>M-x doctor</code> as a cheap therapist, and uh, blog?
+This article is going to be about how I got into <code>Spacemacs</code>, and the best parts of it.
+</p>
+
+<p>
+Throughout this article, you're going to see some key sequences. So when you see <code>M-x foo</code> that means you've
+pressed the <code>alt</code> key, hit the <code>x</code> key, and then typed <code>foo</code>.
+Or if you see <code>SPACE+b+b</code>, you've the space bar, then the b key, and then the b key again.
+This key sequence stuff is one the few things in common between <code>vim</code> and <code>emacs</code>.
+</p>
+</div>
+
+<div id="outline-container-org37fbde4" class="outline-3">
+<h3 id="org37fbde4">Getting My Feet Wet</h3>
+<div class="outline-text-3" id="text-org37fbde4">
+<p>
+I've been programming for around ~7 years now, and have been using emacs for like 6 years.
+It's really like home for me. I used a really crappy laptop (bad at the time even), so GUI programming wasn't a question.
+So I started out building things like calculators, <code>zork</code> style games, and other text based things.
+My timeline would then be:
+</p>
+
+<ol class="org-ol">
+<li>Create god-awful scripts &amp; games using Python's IDLE on Windows. All text of course.</li>
+<li>Experiment with Linux, finding out IDLE doesn't come by default, and not understanding you can just install it</li>
+<li>Trying out <code>vim</code> and noping out (how do I exit?)</li>
+<li>Use <code>emacs</code> with <code>cua-mode</code>, which lets you use windows keybindings for copy/paste (<code>ctrl+c/ctrl+v</code>). Feel like a <code>HackerMan</code>.</li>
+<li>Pickup <code>clojure</code> as hey, <code>lisp</code> and <code>emacs</code> are like PB&amp;J. (<code>paredit</code> is something special).</li>
+<li>Develop repetitive motion injury (<code>emacs</code> pinky) developing my <a href="https://github.com/dpbriggs/Distributed-Sieve-e">first real project.</a></li>
+<li>Shop around for an alternative, and read about <code>vim</code>'s modal paradigm. How it prevents your hands from moving too much.</li>
+<li>Get frustrated with <code>evil-mode</code> (vim keybinding for emacs), discover <code>spacemacs</code>.</li>
+<li>Spend the next year flipping between emacs mode and vim mode. Learn enough <code>vim</code> to be dangerous.</li>
+<li>Learn and tinker with <code>spacemacs</code> ad-infinitum.</li>
+</ol>
+</div>
+</div>
+
+<div id="outline-container-org3940a8e" class="outline-3">
+<h3 id="org3940a8e">What's So Special About Spacemacs?</h3>
+<div class="outline-text-3" id="text-org3940a8e">
+<p>
+The biggest thing that comes to mind is <b>uniformity</b>.
+</p>
+
+<p>
+I literally don't need to think, it's all in my hands. Everything just sort of works the same or similarly<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup>.
+For example, I had to recently learn <code>scala</code> for my latest job, and the <code>Spacemacs</code> <code>scala</code> layer (functionality related to something) works pretty much the same as all of the other layers.
+I just add the <code>scala</code> layer to my <code>.spacemacs</code> file, <b>carefully read the documentation</b>, and I'm up to speed.
+All of the keybindings and behaviors I expect are there. It's a beautiful thing.
+</p>
+
+<p>
+The second biggest thing, is that spacemacs <b>just works</b>. I mean that everything mostly works out of the box.
+If you've been in this scene for years, that's just a treat. Take for example, the footnotes at the bottom
+of this blog article. Those didn't exist in version <code>303f29b</code> of my site. To implement that, I literally just:
+</p>
+
+<ol class="org-ol">
+<li><code>SPACE+b+b</code>, type <code>blo</code>, this fuzzy finds <code>blog.rs</code>, hit enter, this opens the file, and I add the <code>footnote</code> field to the <code>OrgModeHtml</code> field.</li>
+<li><code>/</code> to quickly search though blog.rs for <code>slug</code> (the closest field to <code>footnote</code>), and add the parsing logic.</li>
+<li><code>SPACE+p+f</code> to open a fuzzy searcher for all project files, and add the footnote section to <code>blog_article.tera.html</code>.</li>
+<li><code>cargo test</code> to make sure I didn't break parsing somehow.</li>
+<li>Spend another few minutes coding after you realize footnotes aren't nested, as you need a <code>Option&lt;Vec&lt;String&gt;&gt;</code> to collect footnotes.</li>
+</ol>
+
+<p>
+This whole process took less than six minutes. You're following an optimized<sup><a id="fnr.2" class="footref" href="#fn.2">2</a></sup> text editing paradigm.
+You've spent years slowly memorizing a myriad of obscure keybindings<sup><a id="fnr.3" class="footref" href="#fn.3">3</a></sup>, so you get quick at making changes.
+</p>
+
+<p>
+This is mostly thanks to <code>vim</code>'s modal text editing model, and <code>Spacemacs</code> fantastic keybinding system.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org9035276" class="outline-3">
+<h3 id="org9035276">The Modal Model of Editing</h3>
+<div class="outline-text-3" id="text-org9035276">
+<p>
+So if you're already familiar with this concept, this section won't do you much.
+Otherwise, lets talk about it with some examples.
+</p>
+
+<p>
+In most IDE's and text editors, you probably use the mouse for at least some things.
+If you're just starting out, you'd probably use the mouse quite a lot (I did anyway, that's what you're used to).
+</p>
+
+<p>
+The central idea of advanced text editing techniques is that using the mouse is <b>slow</b> and (for me) <b>bad for your wrists</b>.
+So, ditch it. Try not to use it.
+</p>
+
+<p>
+Ok, so now we can't use the mouse. How do we move around in a file? We have, uh arrow keys?
+</p>
+
+<p>
+No, we <b>literally learn another language</b> to move around in and edit a file.
+</p>
+
+<p>
+In particular, <code>vim</code>'s syntax is more-or-less <code>&lt;repeat&gt; verb modifier object</code>.
+You more-or-less program your editor to program things for you.
+Then verbs are things like "move" or "change", modifiers are kinda complicated ("in", "find"), and objects "words", "blocks", "matching".
+The <code>&lt;repeat&gt;</code> is a cheap way of running the same sentence over again <code>&lt;repeat&gt;</code> times. It's just a number.
+</p>
+
+<p>
+Furthermore, it's called "Modal" because there's modes. In <code>vim</code>, you start in <b>normal</b> mode.
+This is where you can use most of the features of vim. There's also <b>insert</b> mode, where <code>vim</code>
+functions like most editors (i.e. you can actually type text), and then <b>visual</b> and <b>visual-block</b> mode.
+As you don't have a mouse, you sometimes want to select a big chunk of text. You can visually do that with <b>visual</b> or <b>visual-block</b>
+mode. Or you can use more complex vim sentences 😅. There's a lot of choice in this stuff.
+</p>
+
+<p>
+If you're not familiar with the topic already, this may seem complicated. But it's scary just like <code>Привет</code> ("hello") looked scary before I took Russian 101.
+Lets do some quick examples. As there's no mouse, you'll have to pay attention to the cursor (denoted <code>|</code>).
+</p>
+</div>
+
+<div id="outline-container-org175eea3" class="outline-4">
+<h4 id="org175eea3">Deleting some words</h4>
+<div class="outline-text-4" id="text-org175eea3">
+<p>
+Say I have a file with some words in it, and I don't like those words:
+</p>
+
+<pre class="example">
+moist responsibility yeet
+</pre>
+
+<p>
+Lets delete them. So if the cursor is at the front:
+</p>
+
+<pre class="example">
+|moist responsibility yeet
+</pre>
+
+<p>
+What you want to do is <code>Delete Word</code>, or in vim terms <code>dw</code>
+</p>
+
+<pre class="example">
+|moist responsibility yeet
+--&gt; type 'dw', this document becomes
+|responsibility yeet
+</pre>
+
+<p>
+Hell yeah, <code>moist</code> is gone. We can just repeat this two more times and we're out of hated words:
+</p>
+
+<pre class="example">
+|responsibility yeet
+--&gt; type 'dw', this document becomes
+|yeet
+--&gt; type 'dw', this document is now empty
+|
+</pre>
+
+<p>
+We did it! But that was actually inefficient. We forget about <code>&lt;repeat&gt;</code>. We could have just deleted words three times!
+</p>
+
+<pre class="example">
+|moist responsibility yeet
+--&gt; type '3dw', this document is now empty 
+|
+</pre>
+
+<p>
+That was fast, but not fast enough. If we notice that all of the words are on the same line, we could have used the "End of Line" object (in <code>vim</code> its <code>$</code>)
+</p>
+
+<pre class="example">
+|moist responsibility yeet
+--&gt; type 'd$', this document is now empty 
+|
+</pre>
+
+<p>
+&#x2026;and that's not even fast enough. If you've noticed that all of the vim terms we've used are lower-case, a cookie for you.
+There's generally an uppercase version of everything. For example, <code>D</code> is usually defined to be <code>d$</code>, so we can do this with once key!
+</p>
+
+<pre class="example">
+|moist responsibility yeet
+--&gt; type 'D', this document is now empty 
+|
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org955eb81" class="outline-4">
+<h4 id="org955eb81">Visually manipulating stuff</h4>
+<div class="outline-text-4" id="text-org955eb81">
+<p>
+So, as we saw above, there's a bunch of ways to delete text.
+There's also some good ways to select text.
+</p>
+
+<p>
+Say, for example, you have the rust struct below you'd like to copy to another file.
+Again, we'll use the pipe character <code>|</code> to denote the cursor.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #b0bec5;">// </span><span style="color: #b0bec5;">file: foo.rs</span>
+  |<span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+    <span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+    <span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+  <span style="color: #e91e63;">}</span>
+<span style="color: #b0bec5;">// </span><span style="color: #b0bec5;">file: bar.rs</span>
+</pre>
+</div>
+
+<p>
+We have a couple of options. The easiest is probably Visually Selection (<code>v</code>),
+Move down a few lines(<code>j</code> a few times), and Copy (<code>y</code>,"yank"), then goto <code>bar.rs</code> (<code>SPACE+f+f bar.rs</code>), and paste (<code>p</code>).
+Phew, lets see it in action:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #b0bec5;">// </span><span style="color: #b0bec5;">file: foo.rs</span>
+  |<span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+     <span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+     <span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+   <span style="color: #e91e63;">}</span>
+<span style="color: #b0bec5;">//</span><span style="color: #b0bec5;">-&gt; press v, j j j (the |&gt; means this line is visually selected)</span>
+  |&gt;<span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+  |&gt;  <span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+  |&gt;  <span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+  |&gt;<span style="color: #e91e63;">}</span>
+<span style="color: #b0bec5;">//</span><span style="color: #b0bec5;">-&gt; press y to copy it</span>
+  |<span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+    <span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+    <span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+   <span style="color: #e91e63;">}</span>
+<span style="color: #b0bec5;">//</span><span style="color: #b0bec5;">-&gt; SPACE+f+f bar.rs, enter, and paste it (p)</span>
+<span style="color: #b0bec5;">// </span><span style="color: #b0bec5;">file: bar.rs</span>
+  |<span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+    <span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+    <span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+   <span style="color: #e91e63;">}</span>
+</pre>
+</div>
+
+<p>
+We did it! It made it. This probably takes me a few seconds, where the longest delay is opening <code>bar.rs</code>.
+As before, we could have used <code>3j</code> to move three lines down, or notice that <code>FooBar</code> is at the
+end of the file, so <code>G</code> ("goto bottom") would move us to the bottom of the file to select it.
+</p>
+
+<p>
+As making these diagrams is distracting me from writing about spacemacs, I'll just do one more quick example.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org608baec" class="outline-4">
+<h4 id="org608baec">Visual-Block mode to quickly edit parallel text</h4>
+<div class="outline-text-4" id="text-org608baec">
+<p>
+Returning to our previous example, plus complications, lets quickly add <code>pub</code> to each struct field. 
+We could just use <code>h/j/k/l</code> to move around (like arrow keys), or mash <code>w</code>, but lets look at a more elegant method.
+</p>
+
+<p>
+As <code>baz</code> and <code>jaz</code>, and the rest are parallel, we can use Visual-Block mode to add <code>pub</code> before each of them.
+If you've heard of multiple cursors (seperate concept), this is kind of like having multiple cursors.
+We'll first position our cursor at <code>baz</code>, then enter Visual-Block mode, then select all the rows rows,
+and then insert "pub " (that's a space at the end). Lets see it:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #b0bec5;">// </span><span style="color: #b0bec5;">file: foo.rs</span>
+ |<span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+    <span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+    <span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+    <span style="color: #ffcc80;">kaz</span>: <span style="color: #84ffff;">u32</span>,
+    <span style="color: #ffcc80;">haz</span>: <span style="color: #84ffff;">u32</span>,
+  <span style="color: #e91e63;">}</span>
+<span style="color: #b0bec5;">//</span><span style="color: #b0bec5;">-&gt; Lets move the cursor to baz, j w</span>
+  <span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+   |<span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+    <span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+    <span style="color: #ffcc80;">kaz</span>: <span style="color: #84ffff;">u32</span>,
+    <span style="color: #ffcc80;">haz</span>: <span style="color: #84ffff;">u32</span>,
+  <span style="color: #e91e63;">}</span>
+<span style="color: #b0bec5;">//</span><span style="color: #b0bec5;">-&gt; Enter visual select mode, CTRL+V, move down to select rows j j j</span>
+  <span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+   |<span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+   |<span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+   |<span style="color: #ffcc80;">kaz</span>: <span style="color: #84ffff;">u32</span>,
+   |<span style="color: #ffcc80;">haz</span>: <span style="color: #84ffff;">u32</span>,
+  <span style="color: #e91e63;">}</span>
+<span style="color: #b0bec5;">//</span><span style="color: #b0bec5;">-&gt; Insert text, I (capital i), type pub(space)</span>
+  <span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+   |<span style="color: #fff59d;">pub</span> <span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+   |<span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+   |<span style="color: #ffcc80;">kaz</span>: <span style="color: #84ffff;">u32</span>,
+   |<span style="color: #ffcc80;">haz</span>: <span style="color: #84ffff;">u32</span>,
+  <span style="color: #e91e63;">}</span>
+<span style="color: #b0bec5;">//</span><span style="color: #b0bec5;">-&gt; Press escape to enter normal mode, vim will repeat each action</span>
+  <span style="color: #fff59d;">struct</span> <span style="color: #84ffff;">FooBar</span> <span style="color: #e91e63;">{</span>
+   |<span style="color: #fff59d;">pub</span> <span style="color: #ffcc80;">baz</span>: <span style="color: #84ffff;">String</span>,
+    <span style="color: #fff59d;">pub</span> <span style="color: #ffcc80;">jaz</span>: <span style="color: #84ffff;">u32</span>,
+    <span style="color: #fff59d;">pub</span> <span style="color: #ffcc80;">kaz</span>: <span style="color: #84ffff;">u32</span>,
+    <span style="color: #fff59d;">pub</span> <span style="color: #ffcc80;">haz</span>: <span style="color: #84ffff;">u32</span>,
+  <span style="color: #e91e63;">}</span>
+</pre>
+</div>
+
+<p>
+Nice!
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org95b9e2c" class="outline-3">
+<h3 id="org95b9e2c">More Nice Things About Spacemacs</h3>
+<div class="outline-text-3" id="text-org95b9e2c">
+<p>
+Aside from being <code>emacs</code>, offering a solid <code>vim</code> experience, <code>Spacemacs</code> has plenty for the average developer.
+</p>
+
+<ol class="org-ol">
+<li>Its <a href="https://github.com/syl20bnr/spacemacs/tree/master/layers">layer</a> system makes it very easy to add further <a href="https://github.com/syl20bnr/spacemacs/tree/master/layers/+lang">languages</a> and <a href="https://github.com/syl20bnr/spacemacs/tree/master/layers/+tools">other random bits of functionality</a></li>
+<li>Its consistent and discoverable key sequences. Seriously, hit <code>SPACE</code> read all the crazy stuff you can do.</li>
+<li>Its emacs, and therefore, literally infinitely customizable. I recently spent a day getting Firefox to work in a buffer <b>just so I don't have to leave emacs</b></li>
+<li>If the programming language exists, it's got an emacs mode (roughly translate to a spacemacs layer).</li>
+<li>Spacemacs tries it's best to make vim work <b>everywhere</b> in emacs.</li>
+</ol>
+
+<p>
+What's crazy is that this stuff 1 - works 2 - works together. That section above on <code>Visual-Block</code> mode also works in the Emacs file browser (generally <code>dired</code>).
+Need to prefix 45 test files with "test_" (so that <code>foo.py</code> becomes <code>test_foo.py</code>)? It's the same stuff, over again.
+Enter the <code>dired</code> edit mode, enter visual block mode, select the start of every file (hit <code>G</code>), add <code>test_</code>, and hit escape.
+<b>you just renamed 45 files in like 5 seconds</b>. No need for bash scripts like:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span style="color: #fff59d;">for</span> i<span style="color: #fff59d;"> in</span> $<span style="color: #e91e63;">(</span>ls<span style="color: #e91e63;">)</span>; <span style="color: #fff59d;">do</span>
+  mv $<span style="color: #ffcc80;">i</span> test_$<span style="color: #ffcc80;">i</span>
+<span style="color: #fff59d;">done</span>
+</pre>
+</div>
+
+<p>
+All you really need is emacs.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org0454242" class="outline-3">
+<h3 id="org0454242">Extra Reasons to Love Emacs</h3>
+<div class="outline-text-3" id="text-org0454242">
+</div>
+<div id="outline-container-org806a566" class="outline-4">
+<h4 id="org806a566">Org-Mode</h4>
+<div class="outline-text-4" id="text-org806a566">
+<p>
+<code>org-mode</code> is an emacs mode for the markdown format <code>org</code>. It's quite amazing.
+</p>
+
+<p>
+Literally anything you need to do can be done in <code>org-mode</code>
+</p>
+<ol class="org-ol">
+<li>Create blog articles (you're reading an <code>org-mode</code> document right now, rendered on my website)</li>
+<li>Create large, complicated design documents. Oh, you need to export to confluence? There's an export for that <code>org-export-as-confluence</code></li>
+<li>Write all of your assignments in Latex? Organize them in a nice tree structure with org-mode, inline latex where needed, and export as a beautiful pdf.</li>
+<li>Need to do some credit card calculations? There's spreadsheet functionality built into org's tables.</li>
+<li>Need a calendar? <code>org-calendar</code></li>
+<li>Need an agenda? <code>org-agenda</code></li>
+<li>Need a quick, per-project to-do list, that integrates with your agenda + calendar? <code>org-agenda-todo</code></li>
+<li>Need a simple, github render-able markdown format? <code>org-mode</code>.</li>
+<li>Need a nice, simple presentation? <code>org-present</code></li>
+</ol>
+
+<p>
+The list goes on and on. <code>org-mode</code> and <code>.org</code> is an example of a highly productive format.
+Nothing I've encountered comes close to the level of integration and quality that <code>org-mode</code> offers.
+</p>
+
+<p>
+You can add <code>org-mode</code> to spacemacs by adding the <code>org</code> layer.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgbca313c" class="outline-4">
+<h4 id="orgbca313c">Magit</h4>
+<div class="outline-text-4" id="text-orgbca313c">
+<p>
+Magit is probably the best git porcelain to date. It's a lightweight way to manage your git repos.
+It offers everything one could need:
+</p>
+
+<ol class="org-ol">
+<li>A nice way to preview diffs, stage hunks, and commit them (no more <code>git add .</code> and have a messy history)</li>
+<li>A nice way to deal with merge conflicts, with an emacs-integrated side-by-side viewer.</li>
+<li>Zero thought pushing/pulling/branching/etc. It's just a <code>SPACE+g+s p p</code> to push your local commits.</li>
+<li>Need to see what commit a particular line was edited in? <code>SPACE+g+b</code> to inline <code>git blame</code></li>
+</ol>
+
+<p>
+Seriously, if you use emacs, or are planning to, make this a must have package.
+</p>
+
+<p>
+You can add magit to spacemacs by adding the <code>git</code> layer.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org1d23839" class="outline-3">
+<h3 id="org1d23839">More Advanced Text Editing techniques / General Cool Things</h3>
+<div class="outline-text-3" id="text-org1d23839">
+<p>
+Expanding on the list above, here's some useful techiques I use frequently:
+</p>
+</div>
+
+<div id="outline-container-orgfc205e1" class="outline-4">
+<h4 id="orgfc205e1">vim-surround</h4>
+<div class="outline-text-4" id="text-orgfc205e1">
+<p>
+As a software developer, you're often surrounding stuff with brackets or quotes or something.
+</p>
+
+<p>
+<code>Spacemacs</code> comes with <code>vim-surround</code> emulation out of the box.
+The grammar is something like <code>&lt;verb&gt;s &lt;repreat&gt; &lt;modifier&gt; &lt;object&gt; &lt;surrouding-object&gt;"
+The most useful verbs are =y</code>, <code>d</code>, and <code>c</code>. <code>y</code> lets you surround something, <code>d</code> lets you delete something, and <code>c</code> changes the surrounding thing.
+</p>
+
+<p>
+So the sequence <code>ysiw)</code> would say "Surround (in) this word with ()". Eg. <code>Hello -&gt; (Hello)</code>.
+</p>
+
+<p>
+(hello)
+</p>
+
+<p>
+<code>d</code> is the opposite, so <code>ds)</code> would delete the parentheses. Eg. <code>(Hello) -&gt; Hello</code>.
+</p>
+
+<p>
+(Hello)
+</p>
+
+<p>
+<code>c</code> changes the surrounding thing, <code>cs)]</code> would change <code>()</code> to <code>[]</code>. Eg. <code>(Hello) -&gt; [Hello]</code>
+</p>
+</div>
+</div>
+
+<div id="outline-container-orga9e89fd" class="outline-4">
+<h4 id="orga9e89fd">Macros</h4>
+<div class="outline-text-4" id="text-orga9e89fd">
+<p>
+<code>Vim=/=Emacs</code> macros are a life saver. This is very similar to an Excel macro, if you've used one.
+</p>
+
+<p>
+You start recording a macro with the grammar <code>q&lt;reg&gt;</code>, where <code>reg</code> is a vim register (I'll get to that).
+Generally people use <code>qq</code> (store macro in the <code>q</code> reg). You record some actions, then store in that register.
+You can call it again later with the grammar <code>@&lt;reg&gt;</code>, which is usually <code>@q</code>.
+</p>
+
+<p>
+For example, you can quickly convert a json object to a list of variables with a macro. Just record transforming one, and replay it on the rest:
+</p>
+
+<pre class="example">
+{
+   |"foo": "bar"
+   "baz": "yaz"
+   "haz": "bab"
+}
+//-&gt; qq v$ ds" s/:/ =/ j q
+//-&gt; 2@q
+//-&gt; This will transform into
+{
+   foo = "bar"
+   baz = "yaz"
+   haz = "bab"
+}
+//-&gt; And of course you can use ds{ to remove the outer curly braces.
+
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org78eb6b4" class="outline-4">
+<h4 id="org78eb6b4">Registers</h4>
+<div class="outline-text-4" id="text-org78eb6b4">
+<p>
+Like we say with macros, we can record stuff to <b>registers</b>. This are just temporary ways to store text.
+You can prefix a command with <code>"&lt;reg&gt; &lt;rest of the sentence&gt;"</code> and it will record into that register.
+</p>
+
+<p>
+Vim automatically places <code>yanked</code> text (basically any text deleted or explicity copied) into registers <code>"0</code> through <code>"9</code>.
+</p>
+
+<p>
+So if you want to paste something you had deleted a two operations ago, it'll probably be in the <code>"1</code> register.
+</p>
+
+<p>
+I personally don't use registers much after I discovered <code>Spacemacs</code> had a paste <code>transient</code> mode, where I could just <code>CTRL-j</code> through my history.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org2ea2923" class="outline-4">
+<h4 id="org2ea2923">Marks</h4>
+<div class="outline-text-4" id="text-org2ea2923">
+<p>
+Sometimes you're editing a super large file, and you need to keep coming back to the same stop. 
+You could guesstimate where it'll be by jumping to its line <code>415gg</code>, or you could search for it.
+</p>
+
+<p>
+A better, more stable way is with marks. You mark a location with <code>m&lt;reg&gt;</code>, edit somewhere else, and jump back with <code>`&lt;reg&gt;</code>.
+I generally use <code>a</code> as my first register, then <code>b</code>, and so on. Lowercase registers are specific to a particular file, 
+and uppercase registers are global. So if I have a spot I keep jumping into in a file, I just use <code>mA</code>, and then jump to it when I need
+to with <code>`A</code>.
+</p>
+
+<p>
+Like before, vim automatically populates the anonymous register <code>`</code> with the last cursor location. So if you jump to the end of a file with <code>G</code>,
+jump back with <code>``</code>.
+</p>
+
+<p>
+Similarly, <code>CTRL-o</code> will undo your search history. So you jump three files deep finding something, use <code>CTRL-o</code> to jump backward through your navigation history.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org52092d0" class="outline-4">
+<h4 id="org52092d0">Undo-Tree</h4>
+<div class="outline-text-4" id="text-org52092d0">
+<p>
+Have you ever <code>CTRL+z</code>'d a bunch of things, wrote some more stuff, and realized you needed something undid?
+</p>
+
+<p>
+Most editors have a linear undo-redo history. Not emacs with <code>undo-tree</code> (which <code>Spacemacs</code> comes with).
+</p>
+
+<p>
+Just run <code>undo-tree-visualize</code>, and you'll have an entire tree of edits to jump through, where you can grab your changes, and then traverse back and paste it.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org47fb4ec" class="outline-4">
+<h4 id="org47fb4ec">Projectile-*</h4>
+<div class="outline-text-4" id="text-org47fb4ec">
+<p>
+Spacemacs comes with some baked in features to manage "Projects". 
+A project is sort of loosely defined, but it's generally a source control repo (eg. a git repo).
+</p>
+
+<p>
+Some useful features:
+</p>
+<ul class="org-ul">
+<li><code>projectile-replace</code> replace a particular identifier EVERYWHERE</li>
+<li><code>projectile-find-file</code> opens a fuzzy finder for every file in the project.</li>
+</ul>
+
+<p>
+<a id="org107e820"></a>
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
+The quality of layers <i>can</i> differ dramatically.
+For example, the <code>Elm</code> layer is pretty bad at the time of writing.
+Popular languages tend to have <b>very good</b> layers.
+Not to mention the language-server-protocol breathing new life into the emacs-ide-level-support scene.
+</p></div></div>
+
+<div class="footdef"><sup><a id="fn.2" class="footnum" href="#fnr.2">2</a></sup> <div class="footpara"><p class="footpara">
+If you're somehow reading this, your way of doing things may be <b>very</b> different. Maybe you have a better workflow, maybe you don't.
+You never really stop learning ways to get faster at this stuff.
+If you're confused why this footnote exists, there's a <i>heathly</i> culture in the text editing community about being the fastest and <i>politely</i> teaching how.
+Maybe I'm just being insecure 🤷.
+</p></div></div>
+
+<div class="footdef"><sup><a id="fn.3" class="footnum" href="#fnr.3">3</a></sup> <div class="footpara"><p class="footpara">
+This is the sort of stuff you learn first, see some better techniques in <a href="#org107e820">More Advanced Text Editing Techniques</a>.
+</p></div></div>
+
+
+</div>
+</div></div>
+<div id="postamble" class="status">
+<p class="author">Author: David Briggs</p>
+<p class="date">Created: 2019-02-14 Thu 23:17</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

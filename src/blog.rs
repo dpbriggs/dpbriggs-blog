@@ -33,6 +33,7 @@ pub struct OrgModeHtml {
     pub toc: String,
     pub html: String,
     pub slug: String,
+    pub footnotes: Vec<String>,
 }
 
 fn get_html_files(base: &str) -> Result<Vec<PathBuf>, io::Error> {
@@ -118,6 +119,12 @@ pub fn get_html_contents(blog_file: &PathBuf) -> Result<OrgModeHtml, ParsingErro
         None => return Err(ParsingError::CannotMakeSlug(blog_file.to_path_buf())),
     };
 
+    let footnotes = document
+        .find(Class("footdef"))
+        .into_iter()
+        .map(|x| x.html())
+        .collect();
+
     info!("Successfully parsed {:?}", blog_file);
 
     Ok(OrgModeHtml {
@@ -126,6 +133,7 @@ pub fn get_html_contents(blog_file: &PathBuf) -> Result<OrgModeHtml, ParsingErro
         toc,
         html,
         slug,
+        footnotes,
     })
 }
 

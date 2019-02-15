@@ -26,6 +26,13 @@
 
 <div class="container bordered">
     {{ curr_blog.html | safe }}
+    <br>
+    {% if curr_blog.footnotes %}
+    <div class="border-bottom padding-bottom=10px;"></div>
+    {% for footnote in curr_blog.footnotes %}
+      {{ footnote | safe }}
+    {% endfor %}
+    {% endif %}
 </div>
 
 {% endblock blogcontent %}

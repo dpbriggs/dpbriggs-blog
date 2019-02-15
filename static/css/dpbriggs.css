@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css?family=Roboto|Space+Mono');
-
+/* @import url('https://fonts.googleapis.com/css?family=Roboto|Space+Mono'); */
+@import url('https://fonts.googleapis.com/css?family=IBM+Plex+Mono');
 
 /* As I don't want to get around to configuring org-mode */
 /* to output the html I want, we have to use these. */
 
 h1,h2,h3,h4 {
     font-family: monospace !important;
-    font-family: 'Space Mono', monospace !important;
+    font-family: 'IBM Plex Mono', monospace !important;
     font-size: .60rem;
 }
 
@@ -45,7 +45,7 @@ ul,li {
 
 .monospace {
     font-family: monospace;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
 }
 
 .blog-font {
@@ -150,7 +150,7 @@ ul,li {
     background-color: #26282b;
     padding: 10px;
     font-family: monospace !important;
-    font-family: 'Space Mono', monospace !important;
+    font-family: 'IBM Plex Mono', monospace !important;
     font-size: 1rem !important;
 }
 
@@ -163,7 +163,7 @@ ul,li {
 
 code {
     font-family: monospace !important;
-    font-family: 'Space Mono', monospace !important;
+    font-family: 'IBM Plex Mono', monospace !important;
     font-size: 1rem !important;
     color: #009b75 !important;
 }

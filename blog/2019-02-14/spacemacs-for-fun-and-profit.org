@@ -1,0 +1,414 @@
+#+AUTHOR: David Briggs
+#+TITLE: Spacemacs for Fun and Profit
+#+TAGS: rust tera org-mode
+#+OPTIONS: html-style:nil num:nil
+<2019-02-14 Thu>
+#+ATTR_HTML: target="_blank" 
+
+
+* Spacemacs for Fun and Profit
+
+I've been using [[https://github.com/syl20bnr/spacemacs][Spacemacs]] for a few years, and emacs for a few years before that.
+If you're not familiar with =Spacemacs=, it's an emacs/vim hybrid thing with a functional setup system.
+You can use it to edit text, code, email, play tetris, use =M-x doctor= as a cheap therapist, and uh, blog?
+This article is going to be about how I got into =Spacemacs=, and the best parts of it.
+
+Throughout this article, you're going to see some key sequences. So when you see =M-x foo= that means you've
+pressed the =alt= key, hit the =x= key, and then typed =foo=.
+Or if you see =SPACE+b+b=, you've the space bar, then the b key, and then the b key again.
+This key sequence stuff is one the few things in common between =vim= and =emacs=.
+
+** Getting My Feet Wet
+
+I've been programming for around ~7 years now, and have been using emacs for like 6 years.
+It's really like home for me. I used a really crappy laptop (bad at the time even), so GUI programming wasn't a question.
+So I started out building things like calculators, =zork= style games, and other text based things.
+My timeline would then be:
+
+1. Create god-awful scripts & games using Python's IDLE on Windows. All text of course.
+2. Experiment with Linux, finding out IDLE doesn't come by default, and not understanding you can just install it
+3. Trying out =vim= and noping out (how do I exit?)
+4. Use =emacs= with =cua-mode=, which lets you use windows keybindings for copy/paste (=ctrl+c/ctrl+v=). Feel like a =HackerMan=.
+5. Pickup =clojure= as hey, =lisp= and =emacs= are like PB&J. (=paredit= is something special).
+6. Develop repetitive motion injury (=emacs= pinky) developing my [[https://github.com/dpbriggs/Distributed-Sieve-e][first real project.]]
+7. Shop around for an alternative, and read about =vim='s modal paradigm. How it prevents your hands from moving too much.
+8. Get frustrated with =evil-mode= (vim keybinding for emacs), discover =spacemacs=. 
+9. Spend the next year flipping between emacs mode and vim mode. Learn enough =vim= to be dangerous.
+10. Learn and tinker with =spacemacs= ad-infinitum.
+
+** What's So Special About Spacemacs?
+
+The biggest thing that comes to mind is *uniformity*.
+
+I literally don't need to think, it's all in my hands. Everything just sort of works the same or similarly[fn:1].
+For example, I had to recently learn =scala= for my latest job, and the =Spacemacs= =scala= layer (functionality related to something) works pretty much the same as all of the other layers.
+I just add the =scala= layer to my =.spacemacs= file, *carefully read the documentation*, and I'm up to speed.
+All of the keybindings and behaviors I expect are there. It's a beautiful thing.
+
+The second biggest thing, is that spacemacs *just works*. I mean that everything mostly works out of the box.
+If you've been in this scene for years, that's just a treat. Take for example, the footnotes at the bottom
+of this blog article. Those didn't exist in version =303f29b= of my site. To implement that, I literally just:
+
+1. =SPACE+b+b=, type =blo=, this fuzzy finds =blog.rs=, hit enter, this opens the file, and I add the =footnote= field to the =OrgModeHtml= field.
+2. =/= to quickly search though blog.rs for =slug= (the closest field to =footnote=), and add the parsing logic.
+3. =SPACE+p+f= to open a fuzzy searcher for all project files, and add the footnote section to =blog_article.tera.html=.
+4. =cargo test= to make sure I didn't break parsing somehow.
+5. Spend another few minutes coding after you realize footnotes aren't nested, as you need a =Option<Vec<String>>= to collect footnotes.
+
+This whole process took less than six minutes. You're following an optimized[fn:2] text editing paradigm.
+You've spent years slowly memorizing a myriad of obscure keybindings[fn:3], so you get quick at making changes.
+
+This is mostly thanks to =vim='s modal text editing model, and =Spacemacs= fantastic keybinding system.
+
+** The Modal Model of Editing
+
+So if you're already familiar with this concept, this section won't do you much.
+Otherwise, lets talk about it with some examples.
+
+In most IDE's and text editors, you probably use the mouse for at least some things.
+If you're just starting out, you'd probably use the mouse quite a lot (I did anyway, that's what you're used to).
+
+The central idea of advanced text editing techniques is that using the mouse is *slow* and (for me) *bad for your wrists*.
+So, ditch it. Try not to use it.
+
+Ok, so now we can't use the mouse. How do we move around in a file? We have, uh arrow keys?
+
+No, we *literally learn another language* to move around in and edit a file.
+
+In particular, =vim='s syntax is more-or-less =<repeat> verb modifier object=.
+You more-or-less program your editor to program things for you.
+Then verbs are things like "move" or "change", modifiers are kinda complicated ("in", "find"), and objects "words", "blocks", "matching".
+The =<repeat>= is a cheap way of running the same sentence over again =<repeat>= times. It's just a number.
+
+Furthermore, it's called "Modal" because there's modes. In =vim=, you start in *normal* mode.
+This is where you can use most of the features of vim. There's also *insert* mode, where =vim=
+functions like most editors (i.e. you can actually type text), and then *visual* and *visual-block* mode.
+As you don't have a mouse, you sometimes want to select a big chunk of text. You can visually do that with *visual* or *visual-block*
+mode. Or you can use more complex vim sentences 😅. There's a lot of choice in this stuff.
+
+If you're not familiar with the topic already, this may seem complicated. But it's scary just like =Привет= ("hello") looked scary before I took Russian 101.
+Lets do some quick examples. As there's no mouse, you'll have to pay attention to the cursor (denoted =|=).
+
+*** Deleting some words
+
+Say I have a file with some words in it, and I don't like those words:
+
+#+begin_example
+moist responsibility yeet
+#+end_example
+
+Lets delete them. So if the cursor is at the front:
+
+#+begin_example
+|moist responsibility yeet
+#+end_example
+
+What you want to do is =Delete Word=, or in vim terms =dw=
+
+#+begin_example
+|moist responsibility yeet
+--> type 'dw', this document becomes
+|responsibility yeet
+#+end_example
+
+Hell yeah, =moist= is gone. We can just repeat this two more times and we're out of hated words:
+
+#+begin_example
+|responsibility yeet
+--> type 'dw', this document becomes
+|yeet
+--> type 'dw', this document is now empty
+|
+#+end_example
+
+We did it! But that was actually inefficient. We forget about =<repeat>=. We could have just deleted words three times!
+
+#+begin_example
+|moist responsibility yeet
+--> type '3dw', this document is now empty 
+|
+#+end_example
+
+That was fast, but not fast enough. If we notice that all of the words are on the same line, we could have used the "End of Line" object (in =vim= its =$=)
+
+#+begin_example
+|moist responsibility yeet
+--> type 'd$', this document is now empty 
+|
+#+end_example
+
+...and that's not even fast enough. If you've noticed that all of the vim terms we've used are lower-case, a cookie for you.
+There's generally an uppercase version of everything. For example, =D= is usually defined to be =d$=, so we can do this with once key!
+
+#+begin_example
+|moist responsibility yeet
+--> type 'D', this document is now empty 
+|
+#+end_example
+
+*** Visually manipulating stuff
+
+So, as we saw above, there's a bunch of ways to delete text.
+There's also some good ways to select text.
+
+Say, for example, you have the rust struct below you'd like to copy to another file.
+Again, we'll use the pipe character =|= to denote the cursor.
+
+#+begin_src rust
+  // file: foo.rs
+    |struct FooBar {
+      baz: String,
+      jaz: u32,
+    }
+  // file: bar.rs
+#+end_src
+
+We have a couple of options. The easiest is probably Visually Selection (=v=),
+Move down a few lines(=j= a few times), and Copy (=y=,"yank"), then goto =bar.rs= (=SPACE+f+f bar.rs=), and paste (=p=).
+Phew, lets see it in action:
+
+#+begin_src rust
+  // file: foo.rs
+    |struct FooBar {
+       baz: String,
+       jaz: u32,
+     }
+  //-> press v, j j j (the |> means this line is visually selected)
+    |>struct FooBar {
+    |>  baz: String,
+    |>  jaz: u32,
+    |>}
+  //-> press y to copy it
+    |struct FooBar {
+      baz: String,
+      jaz: u32,
+     }
+  //-> SPACE+f+f bar.rs, enter, and paste it (p)
+  // file: bar.rs
+    |struct FooBar {
+      baz: String,
+      jaz: u32,
+     }
+#+end_src
+
+We did it! It made it. This probably takes me a few seconds, where the longest delay is opening =bar.rs=.
+As before, we could have used =3j= to move three lines down, or notice that =FooBar= is at the
+end of the file, so =G= ("goto bottom") would move us to the bottom of the file to select it.
+
+As making these diagrams is distracting me from writing about spacemacs, I'll just do one more quick example.
+
+*** Visual-Block mode to quickly edit parallel text
+
+Returning to our previous example, plus complications, lets quickly add =pub= to each struct field. 
+We could just use =h/j/k/l= to move around (like arrow keys), or mash =w=, but lets look at a more elegant method.
+
+As =baz= and =jaz=, and the rest are parallel, we can use Visual-Block mode to add =pub= before each of them.
+If you've heard of multiple cursors (seperate concept), this is kind of like having multiple cursors.
+We'll first position our cursor at =baz=, then enter Visual-Block mode, then select all the rows rows,
+and then insert "pub " (that's a space at the end). Lets see it:
+
+#+begin_src rust
+  // file: foo.rs
+   |struct FooBar {
+      baz: String,
+      jaz: u32,
+      kaz: u32,
+      haz: u32,
+    }
+  //-> Lets move the cursor to baz, j w
+    struct FooBar {
+     |baz: String,
+      jaz: u32,
+      kaz: u32,
+      haz: u32,
+    }
+  //-> Enter visual select mode, CTRL+V, move down to select rows j j j
+    struct FooBar {
+     |baz: String,
+     |jaz: u32,
+     |kaz: u32,
+     |haz: u32,
+    }
+  //-> Insert text, I (capital i), type pub(space)
+    struct FooBar {
+     |pub baz: String,
+     |jaz: u32,
+     |kaz: u32,
+     |haz: u32,
+    }
+  //-> Press escape to enter normal mode, vim will repeat each action
+    struct FooBar {
+     |pub baz: String,
+      pub jaz: u32,
+      pub kaz: u32,
+      pub haz: u32,
+    }
+#+end_src
+
+Nice!
+
+** More Nice Things About Spacemacs
+
+Aside from being =emacs=, offering a solid =vim= experience, =Spacemacs= has plenty for the average developer.
+
+1. Its [[https://github.com/syl20bnr/spacemacs/tree/master/layers][layer]] system makes it very easy to add further [[https://github.com/syl20bnr/spacemacs/tree/master/layers/%2Blang][languages]] and [[https://github.com/syl20bnr/spacemacs/tree/master/layers/%2Btools][other random bits of functionality]]
+2. Its consistent and discoverable key sequences. Seriously, hit =SPACE= read all the crazy stuff you can do.
+3. Its emacs, and therefore, literally infinitely customizable. I recently spent a day getting Firefox to work in a buffer *just so I don't have to leave emacs*
+4. If the programming language exists, it's got an emacs mode (roughly translate to a spacemacs layer).
+5. Spacemacs tries it's best to make vim work *everywhere* in emacs.
+
+What's crazy is that this stuff 1 - works 2 - works together. That section above on =Visual-Block= mode also works in the Emacs file browser (generally =dired=).
+Need to prefix 45 test files with "test_" (so that =foo.py= becomes =test_foo.py=)? It's the same stuff, over again.
+Enter the =dired= edit mode, enter visual block mode, select the start of every file (hit =G=), add =test_=, and hit escape.
+*you just renamed 45 files in like 5 seconds*. No need for bash scripts like:
+
+#+begin_src bash
+  for i in $(ls); do
+    mv $i test_$i
+  done
+#+end_src
+
+All you really need is emacs.
+
+** Extra Reasons to Love Emacs
+
+*** Org-Mode
+
+=org-mode= is an emacs mode for the markdown format =org=. It's quite amazing.
+
+Literally anything you need to do can be done in =org-mode=
+1. Create blog articles (you're reading an =org-mode= document right now, rendered on my website)
+2. Create large, complicated design documents. Oh, you need to export to confluence? There's an export for that =org-export-as-confluence=
+3. Write all of your assignments in Latex? Organize them in a nice tree structure with org-mode, inline latex where needed, and export as a beautiful pdf.
+4. Need to do some credit card calculations? There's spreadsheet functionality built into org's tables.
+5. Need a calendar? =org-calendar=
+6. Need an agenda? =org-agenda=
+7. Need a quick, per-project to-do list, that integrates with your agenda + calendar? =org-agenda-todo=
+8. Need a simple, github render-able markdown format? =org-mode=.
+9. Need a nice, simple presentation? =org-present=
+
+The list goes on and on. =org-mode= and =.org= is an example of a highly productive format.
+Nothing I've encountered comes close to the level of integration and quality that =org-mode= offers.
+
+You can add =org-mode= to spacemacs by adding the =org= layer.
+
+*** Magit
+
+Magit is probably the best git porcelain to date. It's a lightweight way to manage your git repos.
+It offers everything one could need:
+
+1. A nice way to preview diffs, stage hunks, and commit them (no more =git add .= and have a messy history)
+2. A nice way to deal with merge conflicts, with an emacs-integrated side-by-side viewer.
+3. Zero thought pushing/pulling/branching/etc. It's just a =SPACE+g+s p p= to push your local commits.
+4. Need to see what commit a particular line was edited in? =SPACE+g+b= to inline =git blame=
+
+Seriously, if you use emacs, or are planning to, make this a must have package.
+
+You can add magit to spacemacs by adding the =git= layer.
+
+** More Advanced Text Editing techniques / General Cool Things
+
+Expanding on the list above, here's some useful techiques I use frequently:
+
+*** vim-surround
+
+As a software developer, you're often surrounding stuff with brackets or quotes or something.
+
+=Spacemacs= comes with =vim-surround= emulation out of the box.
+The grammar is something like =<verb>s <repreat> <modifier> <object> <surrouding-object>"
+The most useful verbs are =y=, =d=, and =c=. =y= lets you surround something, =d= lets you delete something, and =c= changes the surrounding thing.
+
+So the sequence =ysiw)= would say "Surround (in) this word with ()". Eg. =Hello -> (Hello)=.
+
+(hello)
+
+=d= is the opposite, so =ds)= would delete the parentheses. Eg. =(Hello) -> Hello=.
+
+(Hello)
+
+=c= changes the surrounding thing, =cs)]= would change =()= to =[]=. Eg. =(Hello) -> [Hello]=
+
+*** Macros
+
+=Vim=/=Emacs= macros are a life saver. This is very similar to an Excel macro, if you've used one.
+
+You start recording a macro with the grammar =q<reg>=, where =reg= is a vim register (I'll get to that).
+Generally people use =qq= (store macro in the =q= reg). You record some actions, then store in that register.
+You can call it again later with the grammar =@<reg>=, which is usually =@q=.
+
+For example, you can quickly convert a json object to a list of variables with a macro. Just record transforming one, and replay it on the rest:
+
+#+begin_example
+{
+   |"foo": "bar"
+   "baz": "yaz"
+   "haz": "bab"
+}
+//-> qq v$ ds" s/:/ =/ j q
+//-> 2@q
+//-> This will transform into
+{
+   foo = "bar"
+   baz = "yaz"
+   haz = "bab"
+}
+//-> And of course you can use ds{ to remove the outer curly braces.
+
+#+end_example
+
+*** Registers
+
+Like we say with macros, we can record stuff to *registers*. This are just temporary ways to store text.
+You can prefix a command with ="<reg> <rest of the sentence>"= and it will record into that register.
+
+Vim automatically places =yanked= text (basically any text deleted or explicity copied) into registers ="0= through ="9=.
+
+So if you want to paste something you had deleted a two operations ago, it'll probably be in the ="1= register.
+
+I personally don't use registers much after I discovered =Spacemacs= had a paste =transient= mode, where I could just =CTRL-j= through my history.
+
+*** Marks
+
+Sometimes you're editing a super large file, and you need to keep coming back to the same stop. 
+You could guesstimate where it'll be by jumping to its line =415gg=, or you could search for it.
+
+A better, more stable way is with marks. You mark a location with =m<reg>=, edit somewhere else, and jump back with =`<reg>=.
+I generally use =a= as my first register, then =b=, and so on. Lowercase registers are specific to a particular file, 
+and uppercase registers are global. So if I have a spot I keep jumping into in a file, I just use =mA=, and then jump to it when I need
+to with =`A=.
+
+Like before, vim automatically populates the anonymous register =`= with the last cursor location. So if you jump to the end of a file with =G=,
+jump back with =``=.
+
+Similarly, =CTRL-o= will undo your search history. So you jump three files deep finding something, use =CTRL-o= to jump backward through your navigation history.
+
+*** Undo-Tree
+
+Have you ever =CTRL+z='d a bunch of things, wrote some more stuff, and realized you needed something undid?
+
+Most editors have a linear undo-redo history. Not emacs with =undo-tree= (which =Spacemacs= comes with).
+
+Just run =undo-tree-visualize=, and you'll have an entire tree of edits to jump through, where you can grab your changes, and then traverse back and paste it.
+
+*** Projectile-*
+
+Spacemacs comes with some baked in features to manage "Projects". 
+A project is sort of loosely defined, but it's generally a source control repo (eg. a git repo).
+
+Some useful features:
+- =projectile-replace= replace a particular identifier EVERYWHERE
+- =projectile-find-file= opens a fuzzy finder for every file in the project.
+
+<<sec:adv-edit>>
+
+[fn:1] The quality of layers /can/ differ dramatically.
+For example, the =Elm= layer is pretty bad at the time of writing.
+Popular languages tend to have *very good* layers.
+Not to mention the language-server-protocol breathing new life into the emacs-ide-level-support scene.
+
+[fn:2] If you're somehow reading this, your way of doing things may be *very* different. Maybe you have a better workflow, maybe you don't.
+You never really stop learning ways to get faster at this stuff.
+If you're confused why this footnote exists, there's a /heathly/ culture in the text editing community about being the fastest and /politely/ teaching how.
+Maybe I'm just being insecure 🤷.
+
+[fn:3] This is the sort of stuff you learn first, see some better techniques in [[sec:adv-edit][More Advanced Text Editing Techniques]].
