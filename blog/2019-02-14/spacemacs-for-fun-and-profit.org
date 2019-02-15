@@ -307,6 +307,7 @@ Seriously, if you use emacs, or are planning to, make this a must have package.
 You can add magit to spacemacs by adding the =git= layer.
 
 ** More Advanced Text Editing techniques / General Cool Things
+<<sec:adv-edit>>
 
 Expanding on the list above, here's some useful techiques I use frequently:
 
@@ -315,7 +316,7 @@ Expanding on the list above, here's some useful techiques I use frequently:
 As a software developer, you're often surrounding stuff with brackets or quotes or something.
 
 =Spacemacs= comes with =vim-surround= emulation out of the box.
-The grammar is something like =<verb>s <repreat> <modifier> <object> <surrouding-object>"
+The grammar is something like =<verb>s <repreat> <modifier> <object> <surrouding-object>"=
 The most useful verbs are =y=, =d=, and =c=. =y= lets you surround something, =d= lets you delete something, and =c= changes the surrounding thing.
 
 So the sequence =ysiw)= would say "Surround (in) this word with ()". Eg. =Hello -> (Hello)=.
@@ -344,7 +345,7 @@ For example, you can quickly convert a json object to a list of variables with a
    "baz": "yaz"
    "haz": "bab"
 }
-//-> qq ds" v$ s/:/ =/ j q
+//-> qq ds" v$ s/:/ =/ j 0 w q
 //-> 2@q
 //-> This will transform into
 {
@@ -355,6 +356,8 @@ For example, you can quickly convert a json object to a list of variables with a
 //-> And of course you can use ds{ to remove the outer curly braces.
 
 #+end_example
+
+All said, macros are the perfect way to trade physical effort for mental effort. This is especially important if you're prone to RMI (like me).
 
 *** Registers
 
@@ -400,7 +403,9 @@ Some useful features:
 - =projectile-replace= replace a particular identifier EVERYWHERE
 - =projectile-find-file= opens a fuzzy finder for every file in the project.
 
-<<sec:adv-edit>>
+
+But yeah, all told: I'm a fan of =Spacemacs=, and I will probably be using it for years to come.
+Seriously, take the dive and [[http://spacemacs.org/][try it out]]. I haven't even scratched the surface in this article.
 
 [fn:1] The quality of layers /can/ differ dramatically.
 For example, the =Elm= layer is pretty bad at the time of writing.
