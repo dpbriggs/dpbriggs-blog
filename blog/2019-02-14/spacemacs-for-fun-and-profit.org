@@ -321,11 +321,7 @@ The most useful verbs are =y=, =d=, and =c=. =y= lets you surround something, =d
 
 So the sequence =ysiw)= would say "Surround (in) this word with ()". Eg. =Hello -> (Hello)=.
 
-(hello)
-
 =d= is the opposite, so =ds)= would delete the parentheses. Eg. =(Hello) -> Hello=.
-
-(Hello)
 
 =c= changes the surrounding thing, =cs)]= would change =()= to =[]=. Eg. =(Hello) -> [Hello]=
 
@@ -334,7 +330,7 @@ So the sequence =ysiw)= would say "Surround (in) this word with ()". Eg. =Hello 
 =Vim/Emacs= macros are a life saver. This is very similar to an Excel macro, if you've used one.
 
 You start recording a macro with the grammar =q<reg>=, where =reg= is a vim register (I'll get to that).
-Generally people use =qq= (store macro in the =q= reg). You record some actions, then store in that register.
+Most people use =qq= (store macro in the =q= reg). You record some actions, then store in that register.
 You can call it again later with the grammar =@<reg>=, which is usually =@q=.
 
 For example, you can quickly convert a json object to a list of variables with a macro. Just record transforming one, and replay it on the rest:
@@ -376,7 +372,7 @@ Sometimes you're editing a super large file, and you need to keep coming back to
 You could guesstimate where it'll be by jumping to its line =415gg=, or you could search for it.
 
 A better, more stable way is with marks. You mark a location with =m<reg>=, edit somewhere else, and jump back with =`<reg>=.
-I generally use =a= as my first register, then =b=, and so on. Lowercase registers are specific to a particular file, 
+I mostly use =a= as my first register, then =b=, and so on. Lowercase registers are specific to a particular file, 
 and uppercase registers are global. So if I have a spot I keep jumping into in a file, I just use =mA=, and then jump to it when I need
 to with =`A=.
 
@@ -397,7 +393,7 @@ Just run =undo-tree-visualize=, and you'll have an entire tree of edits to jump 
 *** Projectile-*
 
 Spacemacs comes with some baked in features to manage "Projects". 
-A project is sort of loosely defined, but it's generally a source control repo (eg. a git repo).
+A project is sort of loosely defined, but it's usually a source control repo (eg. a git repo).
 
 Some useful features:
 - =projectile-replace= replace a particular identifier EVERYWHERE
