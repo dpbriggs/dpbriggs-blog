@@ -2,6 +2,11 @@
 <html>
     <head>
         {% include "head" %}
+        <title>
+            {% block title %}
+            {{ base.domain_name }}
+            {% endblock title %}
+        </title>
     </head>
     <body>
         <div>
