@@ -119,11 +119,7 @@ pub fn get_html_contents(blog_file: &PathBuf) -> Result<OrgModeHtml, ParsingErro
         None => return Err(ParsingError::CannotMakeSlug(blog_file.to_path_buf())),
     };
 
-    let footnotes = document
-        .find(Class("footdef"))
-        .into_iter()
-        .map(|x| x.html())
-        .collect();
+    let footnotes = document.find(Class("footdef")).map(|x| x.html()).collect();
 
     info!("Successfully parsed {:?}", blog_file);
 
