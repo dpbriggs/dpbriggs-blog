@@ -1,0 +1,276 @@
+#+AUTHOR: David Briggs
+#+TITLE: Tips for Surviving the University of Waterloo
+#+TAGS: rust tera org-mode
+#+OPTIONS: html-style:nil num:nil
+<2019-02-23 Sat>
+#+ATTR_HTML: target="_blank" 
+
+* Tips for Surviving the University of Waterloo
+
+Now that my brother is in his first year at the University of Waterloo, I was inspired to write about some tips to get you through it.
+I've been at the University of Waterloo (abbreviated UW) for just under four years now, and I've come to appreciate the value of investments.
+I'm talking about investments that'll ease the burden of the University of Waterloo's relentless work-school cycle.
+
+For those of you who are unfamiliar with UW, it's a university in Canada that specializes in providing industry connections ("co-op")
+for its student population. These students will flip-flop every four months between a school term and a work term.
+I'll refer to this process as the Co-op cycle (co-operative cycle).
+
+In a school term, a student can expect to juggle job applications, midterm studying, assignments, midterms, interviews, and more.
+It's certainly no surprise that this cycle can be brutal, especially for the inexperienced or unorganized.
+
+UW has the ability to warp reality itself. You'll find yourself marveling at all the free time you have, working a 40+ hour job
+with hours of travel time a day. It's a common joke among students to recall their parents extolling the difficulties of a full-time job,
+when you're dealing with 60+ hour spikes in workload (to be fair, these students also do not have children).
+
+When you're in UW's bubble, you may feel like the workload is unreasonable, especially when compared to your perception of other universities.
+My rebuttal is this article. You can make investments in yourself and your tools to automate this burden away.
+
+Please note however, this article will be biased on getting through Computer Science at UW, as that is my experience.
+However, I'm sure some of the advice will applicable to other fields of study or universities.
+
+** Invest: In yourself (warning: philosophy ahead)
+
+The best investment you can make to get through UW is invest your spare time and resources into bettering yourself.
+There's the obvious advice: hit the gym, eat better, and sleep longer. That advice is well elaborated elsewhere.
+
+I think there's some bigger advice that's often less-internalized than it should be.
+
+What I feel is underappreciated is the need to focus on what *you want*, and *determine pathways* to get there. You're probably young and if you're at UW, you're surrounded with opportunity.
+
+This is not new advice, as most self-help resources ask you to set a goal, and sub-goals to work towards it.
+This is easy to think about and easy to apply in linear pathways (e.g. you can do assignments one question at a time),
+but difficult to apply in less linear pathways, like life.
+
+Life winds about. Things happen. You have successes, upsets, and plateaus. It can be easy to get caught up in the moment; survive day-by-day.
+
+Long term planning, by contrast, is a more difficult. There's many things working against you here:
+
+1. Failure is something most people don't want to ponder. It's often sickening.
+2. It's easy to excuse yourself (and not others!). You're brain is wired to protect itself.
+3. It's easy to dream unrealistic dreams; easier to think than act.
+4. You're human. You're not "ideal". You will make mistakes, miss things, and probably be hypocritical.
+
+These points center around failures of one kind or another. I personally obsess over these four points
+as they offer great advice on how to get to where *I want to be*. So, with these flaws in mind, what should you do?
+
+First things first, you need to determine *what you want*. I personally want financial success and a stable career, and
+use this a platform for some sort of philanthropy. I'm sort of wired for this stuff, as I've known this from my early teens.
+So, unless you've been blessed like myself, you'll need to *determine your values* and use those to guide you.
+*Note*: If you don't know what you want, that's OK. You should ensure you're always keeping opportunities open for yourself when you figure it out.
+
+Then, you need to make plans. I've developed a system I call the "delta system". I'm sure someone else has invented it prior (or its common knowledge),
+but in the same way I don't blog
+unless I've made the blogging platform, I won't follow it. This simple system is then: Measure where you are today, where you were previously,
+and where you want to be.
+
+The measuring part is obviously the important part. Look critically at your life. If you experienced a failure,
+what caused it? If you had a success, what lead to it? Are you happy with plateauing, or can you achieve more?
+
+Now, once you've accessed where you are, determine the delta required. What actions can you take to get closer to your goals?
+What *actionable* item could you be doing in the short-term, to invest in long-term success?
+For example, if you want long term financial stability, setting up a budget is an immediate delta to achieving it.
+Or if your long-term goal is career success, and you're failed previously at communication, your immediate delta is to find advice.
+Your later deltas would be to implement identified solutions.
+
+Now, this is simultaneously a little robotic and highly personal, and that's on purpose.
+If modern times have shown anything, it's that gamified systems are easier to follow. 
+(see: mobile games, snowball debt repayment, chinese social credit score)
+
+A personal example of this is the process I underwent to get into UW.
+I had long wanted a good career, and it was now time to identify pathways. At this time tech was ballooning despite the economic crisis,
+and this was a topic I had interest in.
+
+Now, I was a pretty bad junior high school student, with subpar grades to get into a good university.
+I had to get serious. I took to khan-academy and took a serendipitously timed math course in the summer between grades nine and ten.
+Great! I had the grades, but I realized I needed more. My next delta would be to build a portfolio, to help me get into UW and land my work tech job.
+So I built a portfolio. And then things worked out.
+
+I made the necessary investments, and often little more.
+Do keep in mind that this paragraph does not detail the years of blood, sweat, and tears that go into something like this.
+A five hundred character "delta system" does not guarantee success, it merely organizes the effort that goes into being successful.
+
+My final note on investing in yourself is just this: Just a Gödel showed mathematical system cannot prove itself[fn:1],
+an imperfect character cannot perfectly determine his own character. You need to surround yourself with positive, supportive people,
+and carefully learn from them.
+
+** Invest: In your skills
+
+Now that we've made it past personal philosophy, we can talk about more practical matters.
+As a UW student, you'll need to compete against your fellow students for coveted positions.
+This means you need to *good* at what you do. For CS in particular, there's a few areas to get good at:
+
+1. You should be understand common algorithms data structures, and internalize their concepts.
+2. You should be proficient in at least one industry language (One of C/Python/Java/JS[fn:4] is fine), along with proficiency with industry tech.
+3. You should understand that getting an interview, doing an interview, and working a full-time job are three separate skills.
+
+So, lets wade deeper.
+
+*** Algorithms & Data Structures
+
+If you're in CS, you really don't have a choice here.
+A large part of your education in CS will be to learn about algorithms against data structures, and measuring complexity.
+Do your best to gain an intuitive understanding of *why* these things actually work.
+
+I was blessed to have a curious little brother, so a natural framework I use is to distill these things into something a
+child could understand. So, for example, why does a (balanced) binary search tree have a =O(log n)= search time?
+It's not immediately clear how =log= fits into the picture as most people usually study logarithms in a calculus context.
+If you're educated in this area, do try to come up a with good, simple explanation. I would probably say something like:
+Well, =log= can be used to measure how many times we can halve something[fn:2], and if you follow an example, you'll
+notice that we cut the tree in half each time as we search, until we reach the bottom. (with lots more elaborations)
+
+If you're not in CS, pick these things up. There's a dizzying about of material elsewhere about this,
+so my recommendation is pick a popular introduction to CS and finish it. Then work your way up. Then this stuff will apply better.
+
+So, my advice is:
+
+1. Study and be able to reproduce common algorithms / data structures.
+   1. E.g. Can you sort a list of integers? What's an appropriate way to do it? Merge sort, radix sort, heap sort, quicksort? (hint: almost always quicksort)
+   2. E.g. What's a linked list? What's a stack? What's a tree? What's a graph? What's a hash table? How can you use these primitives so model problems? Which ones would you choose?
+   3. E.g. Here's some spaghetti code, what's the time complexity of it?
+2. Understand, and recognize, the importance converting data structures into other ones. (you most certainly do this all the time).
+   1. Why do we convert data structures into one another? What's the advantage of converting a list of words into a radix tree? When is it worth it?
+3. Study the memory requirements of data structures / algorithms. This is a science after all, so practical applications are /sometimes/ necessary.
+
+
+*** Proficiency in at Least One Industry Language & Industry Tech
+
+This actually pretty easy if you're curious about this stuff. Industry languages tend to be the most popular languages,
+so you've already picked one up. Proficiency is only gained through practice[fn:3], so keep at making programs.
+Once you've gained enough experience, the world is your limit. There's few other professions where the cost to entry is so low.
+Don't like something? Fuck it, make your own.
+
+Similarly, industry tech tends to be popular ones.
+I do recommend using linux or at least some unix environment. UW's CS club fee is like $2/term, and you get access to a bunch
+of linux boxes. Even better, install linux and use it as your daily driver. You'll find some rough edges you'll need to program
+around. Besides, it's vital to be comfortable with the command line. It's by far the most productive environment, especially when
+you hit a wall in your GUI editor (plug: emacs). You will probably want to understand how to traverse the file system, copy files,
+and pipe bash commands together.
+
+Other bits of popular industry tech include docker, react, django, etc. Look around online for popular frameworks and tools.
+
+*** The Art of the Interview
+
+As mentioned above, there's a reality warping field in the tech industry which has divorced the industry into the holy trinity
+of the Resume, the Interview, and then the actual Work.
+
+There's an immense amount of advice on the internet about all three of these, but here's what personal experience has taught me:
+
+Resume:
+1. It must stand out visually, but must be familiar.
+2. Be as concise as humanly possible, and convey what *you* accomplished.
+3. Use active voice. If can stick "by zombies" at the end of the sentence, it won't feel good to the recruiter.  
+
+Interview:
+1. Practice before hand; map your skills and experience to the position.
+2. Get comfortable with getting stuff wrong. You won't always get the question the instant it's asked. They'll help you, and learn more about you.
+3. Communicate communicate communicate, if you need a second to think, tell them.
+
+Actually working:
+1. Be yourself, but don't be a know-it-all. 
+2. Ask questions. Fuck up. Learn. That's the point of co-op.
+3. Dress nicely and be friendly. If you're introverted like myself, take the effort to get to know your co-workers.
+
+** Invest: In your templates
+
+This section will probably yield the best time savings relative to the effort.
+
+In my [[https://dpbriggs.ca/blog/spacemacs-for-fun-and-profit][previous blog article]] I described the importance of having an optimized system for editing text,
+and this section will deal with having optimized systems for producing documents.
+
+There's three templates I've developed to on time.
+
+*** The Resume and Cover Letter
+
+Before I get into this, I highly recommend using =LaTeX= or similar templating tools.
+The websites are nice and easy, but every uses it, so you may not stand out.
+I keep my templates in source control and as its text, I can do dirty things to it with emacs.
+
+This is probably my most complex template, as it contains several hundred lines of commented out
+sections that I add in or remove depending on the context. For example, my resume source has a bunch of these blocks:
+
+#+begin_src latex
+%% \entry
+%%     {2015}
+%%     {REPORT ON TECHNOLOGY IN THE CLASSROOM (MSAC)}
+%%     {}
+%%     {I coordinated, managed, and shipped a report on technology in the classroom to the Ontario Minister of Education. \\
+%%     Key Skills: \textit{Effective Communication, Problem Solving, Analytical thinking}}
+#+end_src
+
+Depending on the job or position, I toggle these sections to better fit my resume to the job. I then compile it and submit it.
+
+Of course, a template also has to have variables. This is pretty easy in =LaTeX=. In my cover letter, you'll find a bunch of things like:
+
+#+begin_src latex
+\newcommand{\positionTitle}{Developer}
+\newcommand{\recruiterName}{Hiring Team}
+\newcommand{\companyName}{COMPANY}
+\newcommand{\sppp}{\hspace{20pt}}
+#+end_src
+
+And use it like this:
+
+#+begin_src latex
+Regarding the \positionTitle{} position currently advertised on
+#+end_src
+
+Obviously for more important applications, I add new hand written sections, and save them for future use.
+
+*** Assignments
+
+This one is pretty easy if you're using =org-mode=. I usually just copy/paste the header of a previous assignment, which looks like:
+
+#+begin_src org
+#+TITLE: CO487 - A2
+#+AUTHOR: David Briggs (09876432)
+#+EMAIL: dpbriggs@edu.uwaterloo.ca
+
+#+OPTIONS: toc:nil num:0
+#+LATEX_HEADER: \usepackage{mathtools}
+
+\setlength{\parindent}{0em}
+\newcommand{\eqdef}{\vcentcolon=}
+#+end_src
+
+Otherwise, you'll probably need to use =LaTeX= for your CS assignments.
+Develop a common enough document and reuse it later.
+
+*** Work Term Report
+
+If you're not familiar, at UW, you need to write a report on something relating to your work term.
+The grade weighting is all messed up, and the format is weighted as much as the content itself.
+So, if you have a perfectly formatted template, you can write a few thousand words of hot garbage
+and pass the assignment.
+
+So, I built an extensive, nearly perfectly formatted template with =LaTeX= and =org-mode=.
+Nearly everything is automated. So when I need to write one, I fill in the variable section (see below), and then spew bullshit.
+
+#+begin_src latex
+\newcommand{\theTitle}{Neato Documentation and Tutorial}
+\newcommand{\bossCalling}{Mr.}
+\newcommand{\bossFirst}{Foo}
+\newcommand{\bossLast}{Bar}
+\newcommand{\companyCity}{Waterloo}
+\newcommand{\companyCityProvince}{\companyCity{}, Ontario}
+\newcommand{\companyName}{SomethingInUW}
+\newcommand{\companyPostalCode}{N2L 0Z0}
+\newcommand{\companyProvinceShort}{ON}
+\newcommand{\companyStreet}{Something Dr}
+\newcommand{\currentProgram}{Computer Science}
+% ... snip (more variables/latex) ... %
+#+end_src
+
+And that's it. Develop one of these templates in your 1B coop and it'll pay dividends for years to come.
+
+
+** Conclusion
+
+All said, UW is like any university, plus the constant job-finding part.
+It's a lot of work, but if you make good investments, it's way easier.
+
+David Briggs
+
+[fn:1] paraphrasing
+[fn:2] base 2
+[fn:3] As reading two rust books has taught me...
+[fn:4] :shudders:
