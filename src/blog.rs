@@ -26,6 +26,7 @@ pub struct OrgBlog {
     pub blog_files: Vec<OrgModeHtml>,
 }
 
+/// OrgModeHtml represents a particular org-mode blog article.
 #[derive(Serialize, Debug, Clone)]
 pub struct OrgModeHtml {
     pub title: String,

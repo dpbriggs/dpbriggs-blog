@@ -6,7 +6,7 @@
         <div class="container center-desktop d-flex h-100">
             <div class="row align-items-center w-100">
                 <div class="align-self-center bordered mx-auto index-card">
-                    <h3>dpbriggs |<a href="{{ base.resume_pdf_uri }}" target="_blank"> Resume <span class="sr-only">(current)</span></a></h3>
+                    <h3>dpbriggs | <a href="{{ base.resume_pdf_uri }}" target="_blank">Resume<span class="sr-only">(current)</span></a></h3>
                     <br>
                     <br>
                     My resume generally tracks the last few years. My resume is an over engineered latex template, so if your copy

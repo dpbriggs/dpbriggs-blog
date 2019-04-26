@@ -22,6 +22,14 @@
                             Rust/Rocket/Bootstrap/Tera
                         </li>
                         <li class="list-group-item">
+                            <a href="https://github.com/dpbriggs/redis-oxide" target="_blank">
+                                redis-oxide
+                            </a>
+                            <br>
+                            Rust protocol-compatible implementation of <a href="https://redis.io/" target="_blank">Redis</a>. <br>
+                            Rust/Tokio/Redis
+                        </li>
+                        <li class="list-group-item">
                             <a href="https://github.com/dpbriggs/kv" target="_blank">
                                 kv
                             </a>

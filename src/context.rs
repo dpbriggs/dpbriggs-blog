@@ -71,10 +71,10 @@ lazy_static! {
             "resume_pdf_uri" =>  "/resume_pdf",
             "crash_uri" =>  "/500",
             "web_sep" =>  "--",
-            "admin_email" =>  "email@dpbriggs.ca",
+            "admin_email" =>  "david@dpbriggs.ca",
             "full_name" =>  "David Briggs",
             "internet_handle" =>  "dpbriggs",
-            "my_email" =>  "email@dpbriggs.ca",
+            "my_email" =>  "david@dpbriggs.ca",
             "github_url" => "https://github.com/dpbriggs",
             "github_repo_url" => "https://github.com/dpbriggs/dpbriggs-blog",
             "linkedin_url" => "https://www.linkedin.com/in/dpbriggs"
