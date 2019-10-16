@@ -1,0 +1,219 @@
+#+AUTHOR: David Briggs
+#+TITLE: Learning and Loving Rust Combinators
+#+OPTIONS: html-style:nil num:nil
+<2019-10-15 Tue>
+#+ATTR_HTML: target="_blank" 
+
+
+* Learning and Loving Rust Combinators
+
+I've been working pretty regularly on [[https://github.com/dpbriggs/redis-oxide][redis-oxide]], a pure rust clone of redis, and the following
+snippet surprised me:
+
+#+name: old_hlen
+#+caption: Match HLen
+#+begin_src rust
+HashOps::HLen(key) => match read_hashes!(state, &key) {
+    Some(hash) => hash.len() as Count,
+    None => 0,
+}.into()
+#+end_src
+
+By itself, this code isn't extraordinary.
+It just checks how many elements is in a given redis hash (dictionary), defaulting to zero.
+The fact it doesn't use combinators is what suprised me. Most of my code recently
+has taken the following form:
+
+#+caption: Combinated HLen
+#+begin_src rust
+HashOps::HLen(key) => read_hashes!(state, &key)
+    .map_or(0, |hash| hash.len() as Count)
+    .into()
+#+end_src
+
+** So What?
+
+Combinators are nice as they allow for concise, and often more readable, type transformations.
+Both examples have similar line length, but differ in visual complexity. The first example has the =match= keyword,
+a block, and pattern matches on option's variants. Visually this is more text to parse and understand,
+especially when you're tired after work. The second, "combinated", example is in my opinion easier to read. We're reading our state,
+transforming the =hash= type into a =Count=, and then discarding the =None= case by defaulting to 0.
+
+We'll see that there's a few more advantages, such as eliminating branches and general purity.
+
+** What are Combinators?
+
+Combinators are a realization of a pretty common pattern: "I can't deal with this type. I'll just return it."
+You've likely used this pattern many, many times. Do you recognize the following snippets?
+
+In python:
+
+#+begin_src python
+def sketchy_legacy_code(n):
+    if n is None:
+        return None
+    return n * 2
+#+end_src
+
+Or in javascript:
+
+#+begin_src js
+function sketchyLegacyCode(n) {
+  if (n === undefined || n === null) {
+    return n;
+  }
+  return n * 2;
+}
+#+end_src
+
+
+This pattern certainly occurs more frequently in weakly typed or dynamically typed languages.
+A (sometimes reasonable) solution to this problem is exceptions, but rust doesn't have them.
+And exceptions can be problematic, as you can forget to catch them or catching them makes the code harder to understand.
+
+Combinators are then a generalization of this concept. If I can operate on this type, I'll do so.
+Otherwise, I'll pass it along. This is a *very* powerful pattern. You can focus on the happy path and errors will be propagated
+automatically if they occur.
+
+** Why use Combinators in Rust?
+
+In the same way that [[https://stackoverflow.com/questions/31477074/how-lazy-evaluation-forced-haskell-to-be-pure][monads saved haskell]], combinators help save rust. Rust is notorious for it's error handling
+as you're forced to encode your errors directly in the type system.
+This usually takes the form of returning =Option<T>= and =Result<T, E>=, which your callees consume.
+
+So rust provides a thousand tools to cut through these types. I'll focus on =Option<T>= this article
+as I'm working with a forgiving database. An =Option<T>= in rust is an enum:
+
+#+begin_src rust
+enum Option<T> {
+    Some(T),
+    None
+}
+#+end_src
+
+So if I receive an =Option<T>=, it's either got data for me (=Some(T)=) or nothing for me (=None=).
+This type is _very_ common in =redis-oxide= and most rust projects. Sometimes you don't care if it's =None=,
+so you can use =if let Some(value) = myoption {...}=, or just =let value = myoption.unwrap()=.
+But sometimes you end with a pathological case.
+
+** A Pathological Case
+
+The redis command =ZSCORE zset_name member= is such an example. It has the following (observed behaviour):
+
+1. If the sorted set does not exist, return Nil.
+2. If the sorted exists, and the member isn't found, return Nil.
+3. Otherwise, return the score of the member as Int.
+
+Let's code this using match statements:
+
+#+begin_src rust
+  // Inputs: zset_key, member
+  match read_zsets!(state, &zset_key) {
+    // The sorted set may not contain `member`, so another option!
+    Some(zset) => match zset.score(&member) {
+      // Notice that we have to explicitly give the ReturnValue type.
+      // We can't wrap it as we need to return Nil!
+      Some(score) => ReturnValue::IntRes(score),
+      None => ReturnValue::Nil
+    },
+    None => ReturnValue::Nil
+  }
+#+end_src
+
+Now this can nest even deeper if we have more options or results to deal with.
+And we're repeating ourselves with =ReturnValue::Nil=.
+
+Thankfully, we can use the =and_then= combinator to un-nest one of our match statements.
+Let's ignore the =None= from =read_zsets!=, as it's not different than the =None= from =zset.score=.
+
+#+caption: Flat Map!
+#+begin_src rust
+  match read_zsets!(state, &zset_key).and_then(|zset| zset.score(&member)) {
+    Some(score) => ReturnValue::IntRes(score),
+    None => ReturnValue::Nil
+  }
+#+end_src
+
+Ok, it's better. But now the line is long and awkwardly formatted.
+Using =and_then= transformed our type into =Option<Score>=, and we
+would like =Option<ReturnValue::IntRes>=. We can get there with a =map=:
+
+#+caption: Map!
+#+begin_src rust
+  read_zsets!(state, &zset_key)
+      .and_then(|zset| zset.score(&member))
+      .map(ReturnValue::IntRes)
+#+end_src
+
+Now our only problem is the return type. We've reached =Option<ReturnValue::IntRes>=,
+so we can use the =unwrap_or= method to deal with the missing key case:
+
+#+caption: Make it Compile!
+#+begin_src rust
+  read_zsets!(state, &zset_key)
+      .and_then(|zset| zset.score(&member))
+      .map(ReturnValue::IntRes)
+      .unwrap_or(ReturnValue::Nil)
+#+end_src
+
+We did it! We've concisely encoded =ZSCORE= in rust in a hard-to-fuck-up way.
+Any sweeping refactors won't forget to change a branch, as there's no branches.
+You've just transformed the types a few times to achieve the desired result.
+
+** A Detour into the Rust Language Source Code
+
+The example above may seem clear to you, but sometimes it's easy to get caught up in a flow.
+
+So what exactly does =map= do, and how is it different from =and_then=?
+
+Thanks to modern software engineering practice, we can just [[https://doc.rust-lang.org/src/core/option.rs.html#445-450][check the source code]].
+
+Here's how rust implements =map= on an =Option<T>=. The signature below
+says: I take a function with one parameter, =T=, which returns a type =U=.
+I will then give you can an =Option<U>=.
+
+#+caption: Rust Map
+#+begin_src rust
+pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Option<U> {
+    match self {
+        Some(x) => Some(f(x)),
+        None => None,
+    }
+}
+#+end_src
+
+So this seems reasonable. It's similar to the python and javascript examples above.
+However, that =Some(f(x))= can cause issues. What is my function returns an option,
+like =zset.scores=? Welp, this expression:
+
+#+begin_src rust
+  read_zsets!(state, &zset_key)
+      .map(|zset| zset.scores(&member))
+#+end_src
+
+Has type =Option<Option<Score>>=. Not good. That's why =and_then= exists:
+
+#+begin_src rust
+pub fn and_then<U, F: FnOnce(T) -> Option<U>>(self, f: F) -> Option<U> {
+    match self {
+        Some(x) => f(x),
+        None => None,
+    }
+}
+#+end_src
+
+So =and_then= will *not* wrap our result in =Some=, and instead relies on the passed
+function to return an =Option=. So that's why we used it in our previous example.
+=zset.score= returns an option, so let's just use its option instead!
+
+** Conclusion
+
+Overall, combinators are useful for making concise type transformations.
+You can decompose your problem into a series of handy transformations,
+and work your way to the solution. This is very common in functional languages,
+like haskell's do notation or clojures threading macro (nil punning).
+
+For sure, if this ends up on hackernews, someone will point out the issues with combinators.
+The worst of them is probably the "what type am I working with?" or borrowing issues.
+
+That said, their use in [[https://github.com/dpbriggs/redis-oxide][redis-oxide]] is likely of great benefit, especially for future maintenance.

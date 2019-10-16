@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2019-10-15 Tue 22:08 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Learning and Loving Rust Combinators</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="David Briggs" />
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2019 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Learning and Loving Rust Combinators</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org4a2ca56">Learning and Loving Rust Combinators</a>
+<ul>
+<li><a href="#orgc78ec3c">So What?</a></li>
+<li><a href="#org585924a">What are Combinators?</a></li>
+<li><a href="#orgad9ece8">Why use Combinators in Rust?</a></li>
+<li><a href="#org116380a">A Pathological Case</a></li>
+<li><a href="#orga316629">A Detour into the Rust Language Source Code</a></li>
+<li><a href="#org55d7a88">Conclusion</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+<span class="timestamp-wrapper"><span class="timestamp">&lt;2019-10-15 Tue&gt;</span></span>
+</p>
+
+
+<div id="outline-container-org4a2ca56" class="outline-2">
+<h2 id="org4a2ca56">Learning and Loving Rust Combinators</h2>
+<div class="outline-text-2" id="text-org4a2ca56">
+<p>
+I've been working pretty regularly on <a href="https://github.com/dpbriggs/redis-oxide">redis-oxide</a>, a pure rust clone of redis, and the following
+snippet surprised me:
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 1: </span>Match HLen</label><pre class="src src-rust" id="orgd1a74bf"><span style="color: #89C5C8;">HashOps</span>::<span style="color: #89C5C8;">HLen</span><span style="color: #DCDCCC;">(</span>key<span style="color: #DCDCCC;">)</span> =&gt; <span style="color: #FDECBC; font-weight: bold;">match</span> <span style="color: #9CC7FB;">read_hashes!</span><span style="color: #DCDCCC;">(</span>state, &amp;key<span style="color: #DCDCCC;">)</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Some</span><span style="color: #CCF8CC;">(</span>hash<span style="color: #CCF8CC;">)</span> =&gt; hash.len<span style="color: #CCF8CC;">()</span> <span style="color: #FDECBC; font-weight: bold;">as</span> <span style="color: #89C5C8;">Count</span>,
+    <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #CCF8CC;">0</span>,
+<span style="color: #DCDCCC;">}</span>.into<span style="color: #DCDCCC;">()</span>
+</pre>
+</div>
+
+<p>
+By itself, this code isn't extraordinary.
+It just checks how many elements is in a given redis hash (dictionary), defaulting to zero.
+The fact it doesn't use combinators is what suprised me. Most of my code recently
+has taken the following form:
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 2: </span>Combinated HLen</label><pre class="src src-rust"><span style="color: #89C5C8;">HashOps</span>::<span style="color: #89C5C8;">HLen</span><span style="color: #DCDCCC;">(</span>key<span style="color: #DCDCCC;">)</span> =&gt; <span style="color: #9CC7FB;">read_hashes!</span><span style="color: #DCDCCC;">(</span>state, &amp;key<span style="color: #DCDCCC;">)</span>
+    .map_or<span style="color: #DCDCCC;">(</span><span style="color: #CCF8CC;">0</span>, |hash| hash.len<span style="color: #CCF8CC;">()</span> <span style="color: #FDECBC; font-weight: bold;">as</span> <span style="color: #89C5C8;">Count</span><span style="color: #DCDCCC;">)</span>
+    .into<span style="color: #DCDCCC;">()</span>
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgc78ec3c" class="outline-3">
+<h3 id="orgc78ec3c">So What?</h3>
+<div class="outline-text-3" id="text-orgc78ec3c">
+<p>
+Combinators are nice as they allow for concise, and often more readable, type transformations.
+Both examples have similar line length, but differ in visual complexity. The first example has the <code>match</code> keyword,
+a block, and pattern matches on option's variants. Visually this is more text to parse and understand,
+especially when you're tired after work. The second, "combinated", example is in my opinion easier to read. We're reading our state,
+transforming the <code>hash</code> type into a <code>Count</code>, and then discarding the <code>None</code> case by defaulting to 0.
+</p>
+
+<p>
+We'll see that there's a few more advantages, such as eliminating branches and general purity.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org585924a" class="outline-3">
+<h3 id="org585924a">What are Combinators?</h3>
+<div class="outline-text-3" id="text-org585924a">
+<p>
+Combinators are a realization of a pretty common pattern: "I can't deal with this type. I'll just return it."
+You've likely used this pattern many, many times. Do you recognize the following snippets?
+</p>
+
+<p>
+In python:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #FDECBC; font-weight: bold;">def</span> <span style="color: #A0EDF0;">sketchy_legacy_code</span><span style="color: #DCDCCC;">(</span>n<span style="color: #DCDCCC;">)</span>:
+    <span style="color: #FDECBC; font-weight: bold;">if</span> n <span style="color: #FDECBC; font-weight: bold;">is</span> <span style="color: #CCF8CC;">None</span>:
+        <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #CCF8CC;">None</span>
+    <span style="color: #FDECBC; font-weight: bold;">return</span> n * <span style="color: #CCF8CC;">2</span>
+</pre>
+</div>
+
+<p>
+Or in javascript:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #FDECBC; font-weight: bold;">function</span> <span style="color: #A0EDF0;">sketchyLegacyCode</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">n</span><span style="color: #DCDCCC;">)</span> <span style="color: #DCDCCC;">{</span>
+  <span style="color: #FDECBC; font-weight: bold;">if</span> <span style="color: #CCF8CC;">(</span>n === <span style="color: #CCF8CC;">undefined</span> || n === <span style="color: #CCF8CC;">null</span><span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">return</span> n;
+  <span style="color: #CCF8CC;">}</span>
+  <span style="color: #FDECBC; font-weight: bold;">return</span> n * <span style="color: #CCF8CC;">2</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+
+<p>
+This pattern certainly occurs more frequently in weakly typed or dynamically typed languages.
+A (sometimes reasonable) solution to this problem is exceptions, but rust doesn't have them.
+And exceptions can be problematic, as you can forget to catch them or catching them makes the code harder to understand.
+</p>
+
+<p>
+Combinators are then a generalization of this concept. If I can operate on this type, I'll do so.
+Otherwise, I'll pass it along. This is a <b>very</b> powerful pattern. You can focus on the happy path and errors will be propagated
+automatically if they occur.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgad9ece8" class="outline-3">
+<h3 id="orgad9ece8">Why use Combinators in Rust?</h3>
+<div class="outline-text-3" id="text-orgad9ece8">
+<p>
+In the same way that <a href="https://stackoverflow.com/questions/31477074/how-lazy-evaluation-forced-haskell-to-be-pure">monads saved haskell</a>, combinators help save rust. Rust is notorious for it's error handling
+as you're forced to encode your errors directly in the type system.
+This usually takes the form of returning <code>Option&lt;T&gt;</code> and <code>Result&lt;T, E&gt;</code>, which your callees consume.
+</p>
+
+<p>
+So rust provides a thousand tools to cut through these types. I'll focus on <code>Option&lt;T&gt;</code> this article
+as I'm working with a forgiving database. An <code>Option&lt;T&gt;</code> in rust is an enum:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">enum</span> <span style="color: #89C5C8;">Option</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">T</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Some</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">T</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">None</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+So if I receive an <code>Option&lt;T&gt;</code>, it's either got data for me (<code>Some(T)</code>) or nothing for me (<code>None</code>).
+This type is <span class="underline">very</span> common in <code>redis-oxide</code> and most rust projects. Sometimes you don't care if it's <code>None</code>,
+so you can use <code>if let Some(value) = myoption {...}</code>, or just <code>let value = myoption.unwrap()</code>.
+But sometimes you end with a pathological case.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org116380a" class="outline-3">
+<h3 id="org116380a">A Pathological Case</h3>
+<div class="outline-text-3" id="text-org116380a">
+<p>
+The redis command <code>ZSCORE zset_name member</code> is such an example. It has the following (observed behaviour):
+</p>
+
+<ol class="org-ol">
+<li>If the sorted set does not exist, return Nil.</li>
+<li>If the sorted exists, and the member isn't found, return Nil.</li>
+<li>Otherwise, return the score of the member as Int.</li>
+</ol>
+
+<p>
+Let's code this using match statements:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Inputs: zset_key, member</span>
+<span style="color: #FDECBC; font-weight: bold;">match</span> <span style="color: #9CC7FB;">read_zsets!</span><span style="color: #DCDCCC;">(</span>state, &amp;zset_key<span style="color: #DCDCCC;">)</span> <span style="color: #DCDCCC;">{</span>
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">The sorted set may not contain `member`, so another option!</span>
+  <span style="color: #89C5C8;">Some</span><span style="color: #CCF8CC;">(</span>zset<span style="color: #CCF8CC;">)</span> =&gt; <span style="color: #FDECBC; font-weight: bold;">match</span> zset.score<span style="color: #CCF8CC;">(</span>&amp;member<span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Notice that we have to explicitly give the ReturnValue type.</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We can't wrap it as we need to return Nil!</span>
+    <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span>score<span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">ReturnValue</span>::<span style="color: #89C5C8;">IntRes</span><span style="color: #DDCC9C;">(</span>score<span style="color: #DDCC9C;">)</span>,
+    <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">ReturnValue</span>::<span style="color: #89C5C8;">Nil</span>
+  <span style="color: #CCF8CC;">}</span>,
+  <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">ReturnValue</span>::<span style="color: #89C5C8;">Nil</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Now this can nest even deeper if we have more options or results to deal with.
+And we're repeating ourselves with <code>ReturnValue::Nil</code>.
+</p>
+
+<p>
+Thankfully, we can use the <code>and_then</code> combinator to un-nest one of our match statements.
+Let's ignore the <code>None</code> from <code>read_zsets!</code>, as it's not different than the <code>None</code> from <code>zset.score</code>.
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 3: </span>Flat Map!</label><pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">match</span> <span style="color: #9CC7FB;">read_zsets!</span><span style="color: #DCDCCC;">(</span>state, &amp;zset_key<span style="color: #DCDCCC;">)</span>.and_then<span style="color: #DCDCCC;">(</span>|zset| zset.score<span style="color: #CCF8CC;">(</span>&amp;member<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span> <span style="color: #DCDCCC;">{</span>
+  <span style="color: #89C5C8;">Some</span><span style="color: #CCF8CC;">(</span>score<span style="color: #CCF8CC;">)</span> =&gt; <span style="color: #89C5C8;">ReturnValue</span>::<span style="color: #89C5C8;">IntRes</span><span style="color: #CCF8CC;">(</span>score<span style="color: #CCF8CC;">)</span>,
+  <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">ReturnValue</span>::<span style="color: #89C5C8;">Nil</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Ok, it's better. But now the line is long and awkwardly formatted.
+Using <code>and_then</code> transformed our type into <code>Option&lt;Score&gt;</code>, and we
+would like <code>Option&lt;ReturnValue::IntRes&gt;</code>. We can get there with a <code>map</code>:
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 4: </span>Map!</label><pre class="src src-rust"><span style="color: #9CC7FB;">read_zsets!</span><span style="color: #DCDCCC;">(</span>state, &amp;zset_key<span style="color: #DCDCCC;">)</span>
+    .and_then<span style="color: #DCDCCC;">(</span>|zset| zset.score<span style="color: #CCF8CC;">(</span>&amp;member<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+    .map<span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">ReturnValue</span>::<span style="color: #89C5C8;">IntRes</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Now our only problem is the return type. We've reached <code>Option&lt;ReturnValue::IntRes&gt;</code>,
+so we can use the <code>unwrap_or</code> method to deal with the missing key case:
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 5: </span>Make it Compile!</label><pre class="src src-rust"><span style="color: #9CC7FB;">read_zsets!</span><span style="color: #DCDCCC;">(</span>state, &amp;zset_key<span style="color: #DCDCCC;">)</span>
+    .and_then<span style="color: #DCDCCC;">(</span>|zset| zset.score<span style="color: #CCF8CC;">(</span>&amp;member<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+    .map<span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">ReturnValue</span>::<span style="color: #89C5C8;">IntRes</span><span style="color: #DCDCCC;">)</span>
+    .unwrap_or<span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">ReturnValue</span>::<span style="color: #89C5C8;">Nil</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+We did it! We've concisely encoded <code>ZSCORE</code> in rust in a hard-to-fuck-up way.
+Any sweeping refactors won't forget to change a branch, as there's no branches.
+You've just transformed the types a few times to achieve the desired result.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orga316629" class="outline-3">
+<h3 id="orga316629">A Detour into the Rust Language Source Code</h3>
+<div class="outline-text-3" id="text-orga316629">
+<p>
+The example above may seem clear to you, but sometimes it's easy to get caught up in a flow.
+</p>
+
+<p>
+So what exactly does <code>map</code> do, and how is it different from <code>and_then</code>?
+</p>
+
+<p>
+Thanks to modern software engineering practice, we can just <a href="https://doc.rust-lang.org/src/core/option.rs.html#445-450">check the source code</a>.
+</p>
+
+<p>
+Here's how rust implements <code>map</code> on an <code>Option&lt;T&gt;</code>. The signature below
+says: I take a function with one parameter, <code>T</code>, which returns a type <code>U</code>.
+I will then give you can an <code>Option&lt;U&gt;</code>.
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 6: </span>Rust Map</label><pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">map</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">U</span>, <span style="color: #ECBC9C;">F</span>: <span style="color: #89C5C8;">FnOnce</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">T</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">U</span><span style="color: #DCDCCC;">&gt;(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">f</span>: <span style="color: #89C5C8;">F</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">U</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">match</span> <span style="color: #FDECBC; font-weight: bold;">self</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span>x<span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span>f<span style="color: #A0EDF0;">(</span>x<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">None</span>,
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+So this seems reasonable. It's similar to the python and javascript examples above.
+However, that <code>Some(f(x))</code> can cause issues. What is my function returns an option,
+like <code>zset.scores</code>? Welp, this expression:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #9CC7FB;">read_zsets!</span><span style="color: #DCDCCC;">(</span>state, &amp;zset_key<span style="color: #DCDCCC;">)</span>
+    .map<span style="color: #DCDCCC;">(</span>|zset| zset.scores<span style="color: #CCF8CC;">(</span>&amp;member<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Has type <code>Option&lt;Option&lt;Score&gt;&gt;</code>. Not good. That's why <code>and_then</code> exists:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">and_then</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">U</span>, <span style="color: #ECBC9C;">F</span>: <span style="color: #89C5C8;">FnOnce</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">T</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">U</span><span style="color: #CCF8CC;">&gt;</span><span style="color: #DCDCCC;">&gt;(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">f</span>: <span style="color: #89C5C8;">F</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">U</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">match</span> <span style="color: #FDECBC; font-weight: bold;">self</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span>x<span style="color: #DDCC9C;">)</span> =&gt; f<span style="color: #DDCC9C;">(</span>x<span style="color: #DDCC9C;">)</span>,
+        <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">None</span>,
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+So <code>and_then</code> will <b>not</b> wrap our result in <code>Some</code>, and instead relies on the passed
+function to return an <code>Option</code>. So that's why we used it in our previous example.
+<code>zset.score</code> returns an option, so let's just use its option instead!
+</p>
+</div>
+</div>
+
+<div id="outline-container-org55d7a88" class="outline-3">
+<h3 id="org55d7a88">Conclusion</h3>
+<div class="outline-text-3" id="text-org55d7a88">
+<p>
+Overall, combinators are useful for making concise type transformations.
+You can decompose your problem into a series of handy transformations,
+and work your way to the solution. This is very common in functional languages,
+like haskell's do notation or clojures threading macro (nil punning).
+</p>
+
+<p>
+For sure, if this ends up on hackernews, someone will point out the issues with combinators.
+The worst of them is probably the "what type am I working with?" or borrowing issues.
+</p>
+
+<p>
+That said, their use in <a href="https://github.com/dpbriggs/redis-oxide">redis-oxide</a> is likely of great benefit, especially for future maintenance.
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: David Briggs</p>
+<p class="date">Created: 2019-10-15 Tue 22:08</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
