@@ -21,13 +21,11 @@
 <meta name="msapplication-TileColor" content="#da532c">
 <meta name="msapplication-config" content="/static/favicons/browserconfig.xml">
 <meta name="theme-color" content="#ffffff">
-
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/instantclick/3.1.0/instantclick.min.js" integrity="sha256-T8RTGotskdhLXy/3avHtzYliRm9WCbiiqm5dbCVH87s=" crossorigin="anonymous" data-no-instant></script>
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.14.1/highlight.min.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
-<script src="//instant.page/1.0.0" type="module" integrity="sha384-6w2SekMzCkuMQ9sEbq0cLviD/yR2HfA/+ekmKiBnFlsoSvb/VmQFSi/umVShadQI"></script>
 <meta name="google-site-verification" content="Lnuy_8fEKiBoRut4jwgeLaMlh1Enz0tI91nzFUiM2Ig" />
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-134130364-1"></script>

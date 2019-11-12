@@ -14,6 +14,14 @@
                     <br>
                     <ul class="list-group">
                         <li class="list-group-item">
+                            <a href="https://github.com/dpbriggs/redis-oxide" target="_blank">
+                                redis-oxide
+                            </a>
+                            <br>
+                            Protocol-compatible, multi-threaded, safe <a href="https://redis.io/" target="_blank">redis</a>.<br>
+                            Rust/Tokio/Redis
+                        </li>
+                        <li class="list-group-item">
                             <a href="https://github.com/dpbriggs/dpbriggs-blog" target="_blank">
                                 dpbriggs-blog
                             </a>
@@ -22,12 +30,13 @@
                             Rust/Rocket/Bootstrap/Tera
                         </li>
                         <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/redis-oxide" target="_blank">
-                                redis-oxide
+                            <a href="https://github.com/dpbriggs/growable-bloom-filters" target="_blank">
+                                growable-bloom-filters
                             </a>
                             <br>
-                            Rust protocol-compatible implementation of <a href="https://redis.io/" target="_blank">Redis</a>. <br>
-                            Rust/Tokio/Redis
+                            Generic, serializable scalable bloom filters in rust.<br>
+                            Used in redis-oxide.<br>
+                            Rust/Serde
                         </li>
                         <li class="list-group-item">
                             <a href="https://github.com/dpbriggs/kv" target="_blank">
@@ -36,14 +45,6 @@
                             <br>
                             Rust key-value storage with bash hooks. <br>
                             Rust/Serde/Bash
-                        </li>
-                        <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/http-api-proxy" target="_blank">
-                                http-api-proxy
-                            </a>
-                            <br>
-                            A simple transparent HTTP API Proxy. <br>
-                            Python/Flask/Docker
                         </li>
                         <li class="list-group-item">
                             <a href="https://github.com/dpbriggs/Distributed-Sieve-e" target="_blank">
