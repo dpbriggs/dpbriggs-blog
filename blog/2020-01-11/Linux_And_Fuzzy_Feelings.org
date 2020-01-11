@@ -1,0 +1,96 @@
+#+AUTHOR: David Briggs
+#+TITLE: Linux and Fuzzy Feelings
+#+OPTIONS: html-style:nil num:nil
+<2020-01-11 Sat>
+#+ATTR_HTML: target="_blank"
+
+
+* Linux and Fuzzy Feelings
+
+I've been using (GNU/)Linux for the better part of a decade now, and have come to appreciate my attachment with the software.
+There's plenty of disadvantages and frustrations with using it as your daily driver. In fact, I write this loving article after dealing with:
+
+- A bios update that made my motherboard forget that Linux exists.
+- After fixing that, the cool kernel I wanted to try failed to start the graphical target.
+- For some reason, CTRL+<Mouse Wheel> isn't zooming webpages in.
+  - Update: 30 minutes later into writing the article, it works again. No idea why.
+
+So, something is keeping me here.
+
+** Why do I use Linux then?
+
+*** What other people say:
+
+People usually post the following list on hackernews to incite some type of FOMO:
+
+- Better development experience
+- Security and Privacy
+  - A sense you're not beholden to the whims of the machine god (win10 updates, etc)
+- The shell™, emacs™ and vim™
+- Some hyper customized, one of a kind setup, that is literally impossible on OSX and Windows
+  - [[http://www.informatimago.com/linux/emacs-on-user-mode-linux.html?repost][e.g. the guy who uses emacs as PID 1]]
+
+*** What I usually say:
+
+- Better development experience
+- Security and Privacy
+  - A sense you're not beholden to the whims of the machine god (win10 updates, etc)
+- The shell™, emacs™ and vim™
+
+*** What I actually mean:
+
+- I've sunk an immense amount of time and energy in understanding this operating system and how to be proficient in it.
+- I've developed custom workflows that you just can't recreate faithfully on other platforms.
+  - No really, I've tried. OSX is good, but it's still OSX.
+- I have a real sense of *ownership* over my software and hardware using it.
+
+That last point is *very* important. I'm not subservient to the machine gods.
+There's no product manager pushing some bullshit change for the sake of it to fuck up my established workflow without recourse (1 week slack WYSIWYG :D).
+
+I've got my tools, and they are old. They don't change often, and rarely for the worse. The core ones -- Emacs and Vim, will last well into the next century.
+The other tools are less essential, like my web browser, shell, and window manager. I've frequently changed those over time, and just rebind the keys to fit muscle memory as required.
+
+*** What's in the back of my mind
+
+# All established setups have opportunity costs. My attention and dedication to a small set of tools means I'm less aware of other developer-friendly tools.
+
+- Fading skills on other operating systems. I used to have the control panel memorized. Now I don't.
+- Less attention to features on other operating systems (eg. you can configure the touchbar on OSX)
+- At work, I'm "that guy". I'm the [[https://insights.stackoverflow.com/survey/2019#technology-_-most-popular-development-environments][4.5%]] that uses emacs + terminal. This has occasionally caused tension when someone wants to show me something, and bizarre shit happens when they mash keys.
+  - And I can't really help much with IDE setup issues outside of interactions with the terminal (e.g. PATH issues).
+  - Rebinding caps lock to control messes with some people at a deep level. I had no idea anyone actually used the key.
+  - The anxiety of someone watching me causes bizarre stuff to happen, including lowercasing an entire file, highlighting only the whitespace, and sorting a python script lexographically.
+
+
+** Fuzzy Feelings
+
+Hopefully it's clear by now that I find Linux familiar and comfortable, if nothing else.
+I recently built a PC and decided to install Arch Linux for the first time, and it pretty much worked! I had an operating system in which I installed all of the required bits, and
+had a greater understanding of all the parts required to keep it running. The feeling of leaving that =chroot= and praying I made the boot entries properly was a thrill.
+
+The fact that this new computer, shoddily constructed by myself and my brother, boots into a viable and
+familiar operating system /that I control/ is fucking amazing. God bless the opensource community.
+
+** Finally: My Setup
+
+It doesn't seem right to write a +love letter+ blog about Linux and not share my setup.
+
+The setup I've roughly used since my [[https://en.wikipedia.org/wiki/CrunchBang_Linux][CrunchBang]] days is to have four virtual desktops[fn:1] setup as follows:
+
+1. The web browser. Used to be Chrome before Firefox became good again.
+2. Emacs.
+3. Terminal.
+4. Empty. Used for temporary or less important applications. Things like graphical file browsers, word processors, or music clients.
+
+I deeply enjoy this setup as it's baked into my muscle memory. There's no distinct advantage in and of itself, aside from maybe separation of concerns.
+The base system doesn't matter much. I used [[https://en.wikipedia.org/wiki/Antergos][Antergos]] until they shutdown and now I just use vanilla Arch Linux (btw).
+My window manager is =i3= with some scripts to polish the experience.
+In fact, at work, I encode this setup fairly well on the OSX machines we work on. The individual tools (emacs) don't work as well or in the same way, but it's similar.
+
+** Conclusion
+
+I feel at home in my Linux setup. It's comfortable. I'm responsible for it, and can tweak it to my needs. And it looks pretty. And so on.
+
+I get fuzzy feelings thinking about it sometimes.
+
+[fn:1] In case you're not familiar, you can have more than one desktop at a time. This feature is now common in popular operating systems.

@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2020-01-11 Sat 18:47 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Linux and Fuzzy Feelings</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="David Briggs" />
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2019 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Linux and Fuzzy Feelings</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org3da3a03">Linux and Fuzzy Feelings</a>
+<ul>
+<li><a href="#orga0850cd">Why do I use Linux then?</a>
+<ul>
+<li><a href="#orgb7b2695">What other people say:</a></li>
+<li><a href="#orgb5fb9c7">What I usually say:</a></li>
+<li><a href="#org62cf01f">What I actually mean:</a></li>
+<li><a href="#orga0a446c">What's in the back of my mind</a></li>
+</ul>
+</li>
+<li><a href="#orgc202f2c">Fuzzy Feelings</a></li>
+<li><a href="#org46b87fa">Finally: My Setup</a></li>
+<li><a href="#org2950f2d">Conclusion</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+<span class="timestamp-wrapper"><span class="timestamp">&lt;2020-01-11 Sat&gt;</span></span>
+</p>
+
+
+<div id="outline-container-org3da3a03" class="outline-2">
+<h2 id="org3da3a03">Linux and Fuzzy Feelings</h2>
+<div class="outline-text-2" id="text-org3da3a03">
+<p>
+I've been using (GNU/)Linux for the better part of a decade now, and have come to appreciate my attachment with the software.
+There's plenty of disadvantages and frustrations with using it as your daily driver. In fact, I write this loving article after dealing with:
+</p>
+
+<ul class="org-ul">
+<li>A bios update that made my motherboard forget that Linux exists.</li>
+<li>After fixing that, the cool kernel I wanted to try failed to start the graphical target.</li>
+<li>For some reason, CTRL+&lt;Mouse Wheel&gt; isn't zooming webpages in.
+<ul class="org-ul">
+<li>Update: 30 minutes later into writing the article, it works again. No idea why.</li>
+</ul></li>
+</ul>
+
+<p>
+So, something is keeping me here.
+</p>
+</div>
+
+<div id="outline-container-orga0850cd" class="outline-3">
+<h3 id="orga0850cd">Why do I use Linux then?</h3>
+<div class="outline-text-3" id="text-orga0850cd">
+</div>
+<div id="outline-container-orgb7b2695" class="outline-4">
+<h4 id="orgb7b2695">What other people say:</h4>
+<div class="outline-text-4" id="text-orgb7b2695">
+<p>
+People usually post the following list on hackernews to incite some type of FOMO:
+</p>
+
+<ul class="org-ul">
+<li>Better development experience</li>
+<li>Security and Privacy
+<ul class="org-ul">
+<li>A sense you're not beholden to the whims of the machine god (win10 updates, etc)</li>
+</ul></li>
+<li>The shell™, emacs™ and vim™</li>
+<li>Some hyper customized, one of a kind setup, that is literally impossible on OSX and Windows
+<ul class="org-ul">
+<li><a href="http://www.informatimago.com/linux/emacs-on-user-mode-linux.html?repost">e.g. the guy who uses emacs as PID 1</a></li>
+</ul></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgb5fb9c7" class="outline-4">
+<h4 id="orgb5fb9c7">What I usually say:</h4>
+<div class="outline-text-4" id="text-orgb5fb9c7">
+<ul class="org-ul">
+<li>Better development experience</li>
+<li>Security and Privacy
+<ul class="org-ul">
+<li>A sense you're not beholden to the whims of the machine god (win10 updates, etc)</li>
+</ul></li>
+<li>The shell™, emacs™ and vim™</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org62cf01f" class="outline-4">
+<h4 id="org62cf01f">What I actually mean:</h4>
+<div class="outline-text-4" id="text-org62cf01f">
+<ul class="org-ul">
+<li>I've sunk an immense amount of time and energy in understanding this operating system and how to be proficient in it.</li>
+<li>I've developed custom workflows that you just can't recreate faithfully on other platforms.
+<ul class="org-ul">
+<li>No really, I've tried. OSX is good, but it's still OSX.</li>
+</ul></li>
+<li>I have a real sense of <b>ownership</b> over my software and hardware using it.</li>
+</ul>
+
+<p>
+That last point is <b>very</b> important. I'm not subservient to the machine gods.
+There's no product manager pushing some bullshit change for the sake of it to fuck up my established workflow without recourse (1 week slack WYSIWYG :D).
+</p>
+
+<p>
+I've got my tools, and they are old. They don't change often, and rarely for the worse. The core ones &#x2013; Emacs and Vim, will last well into the next century.
+The other tools are less essential, like my web browser, shell, and window manager. I've frequently changed those over time, and just rebind the keys to fit muscle memory as required.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orga0a446c" class="outline-4">
+<h4 id="orga0a446c">What's in the back of my mind</h4>
+<div class="outline-text-4" id="text-orga0a446c">
+<ul class="org-ul">
+<li>Fading skills on other operating systems. I used to have the control panel memorized. Now I don't.</li>
+<li>Less attention to features on other operating systems (eg. you can configure the touchbar on OSX)</li>
+<li>At work, I'm "that guy". I'm the <a href="https://insights.stackoverflow.com/survey/2019#technology-_-most-popular-development-environments">4.5%</a> that uses emacs + terminal. This has occasionally caused tension when someone wants to show me something, and bizarre shit happens when they mash keys.
+<ul class="org-ul">
+<li>And I can't really help much with IDE setup issues outside of interactions with the terminal (e.g. PATH issues).</li>
+<li>Rebinding caps lock to control messes with some people at a deep level. I had no idea anyone actually used the key.</li>
+<li>The anxiety of someone watching me causes bizarre stuff to happen, including lowercasing an entire file, highlighting only the whitespace, and sorting a python script lexographically.</li>
+</ul></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgc202f2c" class="outline-3">
+<h3 id="orgc202f2c">Fuzzy Feelings</h3>
+<div class="outline-text-3" id="text-orgc202f2c">
+<p>
+Hopefully it's clear by now that I find Linux familiar and comfortable, if nothing else.
+I recently built a PC and decided to install Arch Linux for the first time, and it pretty much worked! I had an operating system in which I installed all of the required bits, and
+had a greater understanding of all the parts required to keep it running. The feeling of leaving that <code>chroot</code> and praying I made the boot entries properly was a thrill.
+</p>
+
+<p>
+The fact that this new computer, shoddily constructed by myself and my brother, boots into a viable and
+familiar operating system <i>that I control</i> is fucking amazing. God bless the opensource community.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org46b87fa" class="outline-3">
+<h3 id="org46b87fa">Finally: My Setup</h3>
+<div class="outline-text-3" id="text-org46b87fa">
+<p>
+It doesn't seem right to write a <del>love letter</del> blog about Linux and not share my setup.
+</p>
+
+<p>
+The setup I've roughly used since my <a href="https://en.wikipedia.org/wiki/CrunchBang_Linux">CrunchBang</a> days is to have four virtual desktops<sup><a id="fnr.1" class="footref" href="#fn.1">1</a></sup> setup as follows:
+</p>
+
+<ol class="org-ol">
+<li>The web browser. Used to be Chrome before Firefox became good again.</li>
+<li>Emacs.</li>
+<li>Terminal.</li>
+<li>Empty. Used for temporary or less important applications. Things like graphical file browsers, word processors, or music clients.</li>
+</ol>
+
+<p>
+I deeply enjoy this setup as it's baked into my muscle memory. There's no distinct advantage in and of itself, aside from maybe separation of concerns.
+The base system doesn't matter much. I used <a href="https://en.wikipedia.org/wiki/Antergos">Antergos</a> until they shutdown and now I just use vanilla Arch Linux (btw).
+My window manager is <code>i3</code> with some scripts to polish the experience.
+In fact, at work, I encode this setup fairly well on the OSX machines we work on. The individual tools (emacs) don't work as well or in the same way, but it's similar.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org2950f2d" class="outline-3">
+<h3 id="org2950f2d">Conclusion</h3>
+<div class="outline-text-3" id="text-org2950f2d">
+<p>
+I feel at home in my Linux setup. It's comfortable. I'm responsible for it, and can tweak it to my needs. And it looks pretty. And so on.
+</p>
+
+<p>
+I get fuzzy feelings thinking about it sometimes.
+</p>
+</div>
+</div>
+</div>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1">1</a></sup> <div class="footpara"><p class="footpara">
+In case you're not familiar, you can have more than one desktop at a time. This feature is now common in popular operating systems.
+</p></div></div>
+
+
+</div>
+</div></div>
+<div id="postamble" class="status">
+<p class="author">Author: David Briggs</p>
+<p class="date">Created: 2020-01-11 Sat 18:47</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
