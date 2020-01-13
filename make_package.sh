@@ -7,6 +7,7 @@ cp $BIN_FOLDER/$BIN_NAME $TMP_FOLDER
 cp -r blog $TMP_FOLDER
 cp -r static $TMP_FOLDER
 cp -r templates $TMP_FOLDER
+cp -r resume $TMP_FOLDER
 cp *.sh $TMP_FOLDER
 cd $TMP_FOLDER
 ZIP_FILE_NAME="dpbriggs-blog-$(date +'%b-%d-%Y-%I:%M%p').zip"
