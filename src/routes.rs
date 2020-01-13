@@ -8,32 +8,27 @@ use crate::context::{get_base_context, get_template};
 use rocket::Catcher;
 use rocket::Route;
 
-// TODO: Get this working one day
-// macro_rules! simple_route {
-//     ($name:ident, $route: expr) => {
-//         #[get($route)]
-//         fn $name() -> Template {
-//             let context = get_base_context($route);
-//             Template::render(get_template($route), context)
-//         }
-//     };
-// }
-
-#[get("/")]
-fn index() -> Template {
-    let context = get_base_context("/");
-    Template::render("index", context)
+// And just like that, months and months later,
+// it just works.
+macro_rules! simple_route {
+    ($name:ident, $route:literal) => {
+        #[get($route)]
+        fn $name() -> Template {
+            let context = get_base_context($route);
+            Template::render(get_template($route), context)
+        }
+    };
 }
+
+simple_route! {index, "/"}
+simple_route! {resume, "/resume"}
+simple_route! {blog_index, "/blog"}
+simple_route! {linkedin, "/linkedin"}
+simple_route! {github, "/github"}
 
 #[get("/resume_pdf")]
 fn resume_pdf() -> std::io::Result<NamedFile> {
     NamedFile::open(get_template("/resume_pdf"))
-}
-
-#[get("/resume")]
-fn resume() -> Template {
-    let context = get_base_context("/resume");
-    Template::render(get_template("/resume"), context)
 }
 
 #[get("/500")]
@@ -41,35 +36,14 @@ fn crash() -> Result<String, Status> {
     Err(Status::InternalServerError)
 }
 
-#[get("/blog")]
-fn blog_index() -> Template {
-    let context = get_base_context("/blog");
-    Template::render(get_template("/blog"), context)
-}
-
 #[get("/blog/<slug>")]
 fn blog_article(slug: String) -> Option<Template> {
     let mut context = get_base_context("/blog");
-    match context.blog.html.get(&slug) {
-        Some(curr_blog) => {
-            context.curr_blog = Some(curr_blog);
-            context.kv.insert("curr_slug".to_owned(), slug);
-            Some(Template::render("blog/blog_article", context))
-        }
-        None => None,
-    }
-}
-
-#[get("/linkedin")]
-fn linkedin() -> Template {
-    let context = get_base_context("/linkedin");
-    Template::render(get_template("/linkedin"), context)
-}
-
-#[get("/github")]
-fn github() -> Template {
-    let context = get_base_context("/github");
-    Template::render(get_template("/github"), context)
+    context.blog.html.get(&slug).map(|curr_blog| {
+        context.curr_blog = Some(curr_blog);
+        context.kv.insert("curr_slug".to_owned(), slug);
+        Template::render("blog/blog_article", context)
+    })
 }
 
 #[catch(404)]

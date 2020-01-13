@@ -28,7 +28,7 @@ People usually post the following list on hackernews to incite some type of FOMO
   - A sense you're not beholden to the whims of the machine god (win10 updates, etc)
 - The shell™, emacs™ and vim™
 - Some hyper customized, one of a kind setup, that is literally impossible on OSX and Windows
-  - [[http://www.informatimago.com/linux/emacs-on-user-mode-linux.html?repost][e.g. the guy who uses emacs as PID 1]]
+  - [[http://www.informatimago.com/linux/emacs-on-user-mode-linux.html?repost][eg. the guy who uses emacs as PID 1]]
 
 *** What I usually say:
 
@@ -59,7 +59,7 @@ The other tools are less essential, like my web browser, shell, and window manag
 - At work, I'm "that guy". I'm the [[https://insights.stackoverflow.com/survey/2019#technology-_-most-popular-development-environments][4.5%]] that uses emacs + terminal. This has occasionally caused tension when someone wants to show me something, and bizarre shit happens when they mash keys.
   - And I can't really help much with IDE setup issues outside of interactions with the terminal (e.g. PATH issues).
   - Rebinding caps lock to control messes with some people at a deep level. I had no idea anyone actually used the key.
-  - The anxiety of someone watching me causes bizarre stuff to happen, including lowercasing an entire file, highlighting only the whitespace, and sorting a python script lexographically.
+  - The anxiety of someone watching me causes bizarre stuff to happen, including lowercasing an entire file, highlighting only the whitespace, and sorting a python script lexicographically.
 
 
 ** Fuzzy Feelings
