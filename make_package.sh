@@ -8,9 +8,10 @@ cp -r blog $TMP_FOLDER
 cp -r static $TMP_FOLDER
 cp -r templates $TMP_FOLDER
 cp -r resume $TMP_FOLDER
+cp -r caddy $TMP_FOLDER
 cp *.sh $TMP_FOLDER
 cd $TMP_FOLDER
-ZIP_FILE_NAME="dpbriggs-blog-$(date +'%b-%d-%Y-%I:%M%p').zip"
+ZIP_FILE_NAME="dpbriggs-blog-$(date +'%b-%d-%Y-%I-%M%p').zip"
 zip -r  $ZIP_FILE_NAME .
 cd -
 mv $TMP_FOLDER/$ZIP_FILE_NAME .
