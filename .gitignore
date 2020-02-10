@@ -2,3 +2,7 @@
 **/*.rs.bk
 Cargo.lock
 .caddy_env
+*.zip
+*.pdf
+auto/
+*.tex

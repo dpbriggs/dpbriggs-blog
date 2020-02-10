@@ -158,6 +158,7 @@ ul,li {
     background-color: #26282b;
     padding-left: 10px;
     padding-top: 10px;
+    padding-bottom: 10px;
 }
 
 
@@ -166,4 +167,15 @@ code {
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 1rem !important;
     color: #009b75 !important;
+}
+
+.underline {
+    text-decoration: underline
+}
+
+table {
+    margin: 0 auto;
+    border: white 1px;
+    /* border-bottom: black 1px !important; */
+    padding-bottom: 10px;
 }

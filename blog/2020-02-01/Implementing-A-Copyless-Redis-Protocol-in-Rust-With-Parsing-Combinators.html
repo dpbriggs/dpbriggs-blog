@@ -1,0 +1,873 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2020-02-02 Sun 18:47 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Implementing a Copyless Redis Protocol in Rust with Parsing Combinators</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="David Briggs" />
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Implementing a Copyless Redis Protocol in Rust with Parsing Combinators</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orgc44da33">Implementing a Copyless Redis Protocol in Rust with Parsing Combinators</a>
+<ul>
+<li><a href="#orgeab1d43">Redis Serialization Protocol (RESP)</a></li>
+<li><a href="#orgb9b06f6">Parsing Combinators</a></li>
+<li><a href="#org7c29b03">Copyless</a></li>
+<li><a href="#org8ff0a4f">Writing the Parser</a>
+<ul>
+<li><a href="#org12136e7">Data Representation and Type Transformations</a></li>
+<li><a href="#org383ee6a">Error handling and Types</a></li>
+</ul>
+</li>
+<li><a href="#org084050c">Writing the Fundamental Parser</a></li>
+<li><a href="#org5c8973b">Parsing Ints</a></li>
+<li><a href="#org4869bb5">Bulk Strings</a></li>
+<li><a href="#orgedc2107">Arrays: An Issue</a></li>
+<li><a href="#org3695774">Mutual Recursion: Top Level Parse Function and Arrays</a></li>
+<li><a href="#orge30edaf">Putting everything together</a></li>
+<li><a href="#orgb48e3d7">Conclusion</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+<span class="timestamp-wrapper"><span class="timestamp">&lt;2020-02-01 Sat&gt;</span></span>
+</p>
+
+<div id="outline-container-orgc44da33" class="outline-2">
+<h2 id="orgc44da33">Implementing a Copyless Redis Protocol in Rust with Parsing Combinators</h2>
+<div class="outline-text-2" id="text-orgc44da33">
+<p>
+<a href="https://redis.io/">Redis</a> is a fantastic noSQL database with a beautifully simple design. 
+One of the fundamental responsibilities of the redis server is to encode
+and decode RESP (Redis Serialization Protocol) messages. For example, when a client issues the command:
+</p>
+
+<pre class="example">
+SET foo bar
+</pre>
+
+<p>
+That's encoded by the client and sent to the server as:
+</p>
+
+<pre class="example">
+*3\r\n$3\r\nSET\r\n$3\r\nfoo$3\r\nbar\r\n
+</pre>
+
+<p>
+It's not necessary important to understand that RESP message right now,
+but the server will need to decode that back into something equivalent
+so it can perform the operation. This blog post will go through
+my efforts to implement a copyless RESP parser in <a href="https://github.com/dpbriggs/redis-oxide">redis-oxide.</a>
+</p>
+</div>
+
+<div id="outline-container-orgeab1d43" class="outline-3">
+<h3 id="orgeab1d43">Redis Serialization Protocol (RESP)</h3>
+<div class="outline-text-3" id="text-orgeab1d43">
+<p>
+The redis folks were kind enough to simply document the v3 protocol <a href="https://redis.io/topics/protocol">on their website</a>.
+The protocol is CLRF (<code>\r\n</code>) delimited, with each word carrying a type.
+The simplest types are Simple Strings and Errors, which look like:
+</p>
+
+<pre class="example">
++OK\r\n
+-Error Msg\r\n
+</pre>
+
+<p>
+There's also bulkstrings, which are strings with a length:
+</p>
+
+<pre class="example">
+$3\r\nFOO\r\n
+</pre>
+
+<p>
+We also have integers:
+</p>
+
+<pre class="example">
+:1337\r\n
+</pre>
+
+<p>
+And finally we have arrays, which simply have a size indicating how many redis values follow.
+</p>
+
+<pre class="example">
+*3\r\n$3\r\nSET\r\n$3\r\nfoo$3\r\nbar\r\n
+</pre>
+
+<p>
+We can read the array resp as:
+</p>
+
+<pre class="example">
+*3\r\n        -- We have three elements in this array
+$3\r\nSET\r\n -- First element is a bulk string of length 3 with value SET
+$3\r\nfoo     -- Second element is also a bulk string of length 3 with value foo
+$3\r\nbar\r\n -- Third element is also a bulk string of length 3 with value foo
+</pre>
+
+<p>
+Now that we're familiar with the protocol, lets get an idea on what parsing combinators actually are.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgb9b06f6" class="outline-3">
+<h3 id="orgb9b06f6">Parsing Combinators</h3>
+<div class="outline-text-3" id="text-orgb9b06f6">
+<p>
+The basic idea behind parsing combinators is that you build more complex parsers from simpler parsers.
+A simple parser could do something like fetch a word, and then we can use that later to parse sentences, as they're composed of words.
+</p>
+
+<p>
+From the RESP examples above, we can see that it's a series of words delimited by CLRF, so it would be <i>very</i> handy to have a word parser.
+We can implement one pretty simply by collecting all bytes until we hit a CLRF.
+As we'll see later, almost everything in RESP will be parsed by varying the output of our word parser.
+</p>
+
+<p>
+All parsing combinators need a way of representing position in the input. The strategy I'll be using is to have a cursor which I'll track the position of (starting at 0).
+</p>
+</div>
+</div>
+
+<div id="outline-container-org7c29b03" class="outline-3">
+<h3 id="org7c29b03">Copyless</h3>
+<div class="outline-text-3" id="text-org7c29b03">
+<p>
+Now that we understand RESP, and have an idea on what a parser combinator is, we'll need to understand how we can avoid copying in redis oxide.
+For context, I previously heap allocated almost all bytes in <code>redis-oxide</code>. Without digging too deep into the details, my fundamental types were defined as:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ACD2AC;">/// These types are used by state and ops to actually perform useful work.</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Value</span> = <span style="color: #89C5C8;">Vec</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">u8</span><span style="color: #DCDCCC;">&gt;</span>;
+<span style="color: #ACD2AC;">/// Key is the standard type to index our structures</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Key</span> = <span style="color: #89C5C8;">Vec</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">u8</span><span style="color: #DCDCCC;">&gt;</span>;
+</pre>
+</div>
+
+<p>
+Which meant my parser needed to output <code>Vec</code>'s, which are heap allocated. <code>Value</code> and <code>Key</code> are used almost everywhere in the application
+to represent almost all values in a redis command. So we need to change these types to be small, stack allocated items.
+No matter what direction we take, we need to play nice with <code>tokio</code>'s codec scheme.
+</p>
+
+<p>
+Now it should be understood that <code>tokio</code>'s <a href="https://docs.rs/tokio-util/0.2.0/tokio_util/codec/trait.Decoder.html">Decoder</a> trait works as follows:
+</p>
+
+<ol class="org-ol">
+<li><code>redis-oxide</code> uses the <code>tokio</code> framework which provides services to listen on sockets.</li>
+<li>One of the APIs provided is the <code>Decoder</code> trait, which you use to carefully read bytes off a socket to produce a type.</li>
+<li>Tokio maintains a large buffer and will copy bytes received off a socket into this buffer.</li>
+<li>It will pass this buffer to the parser until the parser signals that a type can be produced.</li>
+<li>The <code>tokio</code> managed buffer is <b>smart</b>, and allows for several byte slices to be made safely (<code>Bytes</code> type).</li>
+<li>The parser will cleave off enough bytes from the buffer when producing a type to allow <code>tokio</code> to safely copy later received bytes.</li>
+<li>We bypass lifetime issues as the <code>Bytes</code> type maintains reference counts, so we can pass slices up further up the application.</li>
+<li>Once <code>redis-oxide</code> is done with the produced types, we'll drop the slice references, and memory can be reclaimed.</li>
+</ol>
+
+<p>
+So our parser will need to dance this careful dance. As described above, we can safely share byte slices of this underlying buffer
+using the <code>Bytes</code> type. So we'll redefine our fundamental types in terms of <code>Bytes</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ACD2AC;">/// These types are used by state and ops to actually perform useful work.</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Value</span> = <span style="color: #89C5C8;">Bytes</span>;
+<span style="color: #ACD2AC;">/// Key is the standard type to index our structures</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Key</span> = <span style="color: #89C5C8;">Bytes</span>;
+</pre>
+</div>
+
+<p>
+Aside from a massive related refactoring job, we now need to just write the parser 😛.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org8ff0a4f" class="outline-3">
+<h3 id="org8ff0a4f">Writing the Parser</h3>
+<div class="outline-text-3" id="text-org8ff0a4f">
+<p>
+Writing the parser will require us to solve a few problems:
+</p>
+
+<ol class="org-ol">
+<li>Data representation and type transformations.</li>
+<li>Error handling and type setup.</li>
+<li>Writing the fundamental parsers.</li>
+<li>Dealing with arrays.</li>
+</ol>
+</div>
+
+<div id="outline-container-org12136e7" class="outline-4">
+<h4 id="org12136e7">Data Representation and Type Transformations</h4>
+<div class="outline-text-4" id="text-org12136e7">
+<p>
+To better understand our requirements, let us first consider our <i>output</i> type:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ACD2AC;">/// RedisValueRef is the canonical type for values flowing</span>
+<span style="color: #ACD2AC;">/// through the system. Inputs are converted into RedisValues,</span>
+<span style="color: #ACD2AC;">/// and outputs are converted into RedisValues.</span>
+<span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">derive</span><span style="color: #CCF8CC;">(</span><span style="color: #9CC7FB;">PartialEq, Clone</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">enum</span> <span style="color: #89C5C8;">RedisValueRef</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Bytes</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Error</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Bytes</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Int</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">i64</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Array</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Vec</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">RedisValueRef</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">NullArray</span>,
+    <span style="color: #89C5C8;">NullBulkString</span>,
+    <span style="color: #89C5C8;">ErrorMsg</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Vec</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">u8</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span>, <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">This is not a RESP type. This is an redis-oxide internal error type.</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+This is the type that <code>redix-oxide</code> uses to later run commands, so our parser will eventually need to output this type.
+This means we'll need to transform the given RESP buffer into one of those enums above.
+Doing it directly however is expensive &#x2013; recall that the <code>Bytes</code> type needs to fiddle with reference counts.
+So we'll use a simpler type:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ACD2AC;">/// Fundamental struct for viewing byte slices</span>
+<span style="color: #ACD2AC;">///</span>
+<span style="color: #ACD2AC;">/// Used for zero-copy redis values.</span>
+<span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">BufSplit</span><span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span>;
+
+<span style="color: #ACD2AC;">/// BufSplit based equivalent to our output type RedisValueRef</span>
+<span style="color: #FDECBC; font-weight: bold;">enum</span> <span style="color: #89C5C8;">RedisBufSplit</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">BufSplit</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Error</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">BufSplit</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Int</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">i64</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Array</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Vec</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">RedisBufSplit</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">NullArray</span>,
+    <span style="color: #89C5C8;">NullBulkString</span>,
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+So as we're parsing, we'll need to need to track the <i>start</i> and <i>end</i> of a given byte slice that represents one of <code>RedisBufSplit</code>.
+Later we'll use <code>BufSplit</code> and the true tokio buffer to transform <code>RedisBufSplit → RedisValueRef</code>.
+</p>
+
+<p>
+So for example, if I have the following RESP fragment:
+</p>
+
+<pre class="example">
+frag:  $3\r\nFOO\r\n
+index: 012 3 4567 8
+(\r,\n are single characters)
+</pre>
+
+<p>
+We'd have the following type:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">String</span><span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">BufSplit</span><span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">4</span>,<span style="color: #CCF8CC;">7</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Representing the string byte slice "FOO".
+</p>
+
+<p>
+Now that we can represent our values, we'll need to consider error handling.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org383ee6a" class="outline-4">
+<h4 id="org383ee6a">Error handling and Types</h4>
+<div class="outline-text-4" id="text-org383ee6a">
+<p>
+There's a lot of ways that parsing can fail. A client could send us straight garbage, or something more subtle like an off-by-one error.
+We'll list each error in an enum type:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">derive</span><span style="color: #CCF8CC;">(</span><span style="color: #9CC7FB;">Debug</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">enum</span> <span style="color: #89C5C8;">RESPError</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">UnexpectedEnd</span>,
+    <span style="color: #89C5C8;">UnknownStartingByte</span>,
+    <span style="color: #89C5C8;">IOError</span><span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">io</span>::<span style="color: #89C5C8;">Error</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">IntParseFailure</span>,
+    <span style="color: #89C5C8;">BadBulkStringSize</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">i64</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">BadArraySize</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">i64</span><span style="color: #CCF8CC;">)</span>,
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+As we're writing rust, it's natural to use the <code>Result&lt;T, E&gt;</code> type.
+Our success type needs to track our current position as well as returning a sensible type.
+As well, we'll need to signal our parsing status to <code>tokio</code>. The <code>Decoder</code> trait has the following signature:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">decode</span><span style="color: #DCDCCC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">src</span>: &amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #89C5C8;">BytesMut</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">&gt;</span>, <span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Error</span><span style="color: #DCDCCC;">&gt;</span>;
+</pre>
+</div>
+
+<p>
+This is a peculiar type, so let's work through the possible cases:
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" padding-bottom="10px">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Case</th>
+<th scope="col" class="org-left">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>Ok(Some(Self::Item))</code></td>
+<td class="org-left">We successfully parsed a value!</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>Ok(None)</code></td>
+<td class="org-left">Looks fine but incomplete. We need the client to send more data.</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>Err(Self::Error)</code></td>
+<td class="org-left">Parsing failed somehow.</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+So now we have all the information required. Our <code>Item</code> type needs to track position and
+the actual type, so we can use a tuple <code>(usize, RedisBufSplit)</code>. Our fundamental parsing type is then:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">RedisResult</span> = <span style="color: #89C5C8;">Result</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #89C5C8;">RedisBufSplit</span><span style="color: #DDCC9C;">)</span><span style="color: #CCF8CC;">&gt;</span>, <span style="color: #89C5C8;">RESPError</span><span style="color: #DCDCCC;">&gt;</span>;
+</pre>
+</div>
+
+<p>
+All subsequent parsers will eventually need to output <code>RedisResult</code>.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org084050c" class="outline-3">
+<h3 id="org084050c">Writing the Fundamental Parser</h3>
+<div class="outline-text-3" id="text-org084050c">
+<p>
+Now that we understand our data representation and errors, lets write our first parser! As mentioned several times,
+RESP is a <span class="underline">word</span> based protocol. So lets write a word parser! The only thing we care about is finding the 
+position (index) of the next CLRF.
+</p>
+
+<p>
+As this is infallible, we don't necessary need to use the <code>RedisResult</code> type. So our function can have the following signature:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">word</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #89C5C8;">BufSplit</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">&gt;</span>
+</pre>
+</div>
+
+<p>
+So we'll take the tokio provided buffer <code>buf</code>, and our current position <code>pos</code>,
+and if we can, output <code>Some((next_pos, BufSplit))</code>. We'll use burntsushi's fantastic <code>memchr</code>
+crate to accelerate searching for CLRF (<code>\r\n</code>):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ACD2AC;">/// Get a word from `buf` starting at `pos`</span>
+<span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">inline</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">word</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #89C5C8;">BufSplit</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We're at the edge of `buf`, so we can't find a word.</span>
+    <span style="color: #FDECBC; font-weight: bold;">if</span> buf.len<span style="color: #CCF8CC;">()</span> &lt;= pos <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">None</span>;
+    <span style="color: #CCF8CC;">}</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Find the position of the b'\r'</span>
+    memchr<span style="color: #CCF8CC;">(</span>b<span style="color: #D9A0A0;">'\r'</span>, &amp;buf<span style="color: #DDCC9C;">[</span>pos..<span style="color: #DDCC9C;">]</span><span style="color: #CCF8CC;">)</span>.and_then<span style="color: #CCF8CC;">(</span>|end| <span style="color: #DDCC9C;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">if</span> end + <span style="color: #CCF8CC;">1</span> &lt; buf.len<span style="color: #A0EDF0;">()</span> <span style="color: #A0EDF0;">{</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">pos + end == first index of b'\r' after `pos`</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">pos + end + 2 == ..word\r\n&lt;HERE&gt; -- skip to after CLRF</span>
+            <span style="color: #89C5C8;">Some</span><span style="color: #ACD2AC;">(</span><span style="color: #9CC7FB;">(</span>pos + end + <span style="color: #CCF8CC;">2</span>, <span style="color: #89C5C8;">BufSplit</span><span style="color: #EDDCAC;">(</span>pos, pos + end<span style="color: #EDDCAC;">)</span><span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span>
+        <span style="color: #A0EDF0;">}</span> <span style="color: #FDECBC; font-weight: bold;">else</span> <span style="color: #A0EDF0;">{</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Edge case: We received just enough bytes from the client</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">to get the \r but not the \n</span>
+            <span style="color: #89C5C8;">None</span>
+        <span style="color: #A0EDF0;">}</span>
+    <span style="color: #DDCC9C;">}</span><span style="color: #CCF8CC;">)</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Great! We can now efficiently grab individual words from our input buffer. Even better, simple strings and errors are simple type transformations of this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">simple_string</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">RedisResult</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Ok</span><span style="color: #CCF8CC;">(</span>word<span style="color: #DDCC9C;">(</span>buf, pos<span style="color: #DDCC9C;">)</span>.map<span style="color: #DDCC9C;">(</span>|<span style="color: #A0EDF0;">(</span>pos, word<span style="color: #A0EDF0;">)</span>| <span style="color: #A0EDF0;">(</span>pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">String</span><span style="color: #ACD2AC;">(</span>word<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span><span style="color: #CCF8CC;">)</span>
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">error</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">RedisResult</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Ok</span><span style="color: #CCF8CC;">(</span>word<span style="color: #DDCC9C;">(</span>buf, pos<span style="color: #DDCC9C;">)</span>.map<span style="color: #DDCC9C;">(</span>|<span style="color: #A0EDF0;">(</span>pos, word<span style="color: #A0EDF0;">)</span>| <span style="color: #A0EDF0;">(</span>pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">Error</span><span style="color: #ACD2AC;">(</span>word<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span><span style="color: #CCF8CC;">)</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+If that syntax isn't super familiar, both of the above are equivalent to:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">simple_string</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">RedisResult</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">match</span> word<span style="color: #CCF8CC;">(</span>buf, pos<span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, word<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #A0EDF0;">(</span><span style="color: #ACD2AC;">(</span>pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">String</span><span style="color: #9CC7FB;">(</span>word<span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">None</span><span style="color: #DDCC9C;">)</span>,
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+So all we're doing is wrapping the <code>BufSplit</code> returned by <code>word</code> in the appropriate <code>RedisBufSplit</code> type.
+</p>
+
+<p>
+Nice! So our easy types are out of the way. We now need to parse ints, bulk strings, and finally arrays.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org5c8973b" class="outline-3">
+<h3 id="org5c8973b">Parsing Ints</h3>
+<div class="outline-text-3" id="text-org5c8973b">
+<p>
+Ints are the first non-trivial type to parse. RESP represents signed 64 bit integers as a base 10 string,
+so we'll need to:
+</p>
+
+<ol class="org-ol">
+<li>Grab a word (<code>BufSplit</code>, can turn into byte slice with <code>BufSplit::as_slice</code>)</li>
+<li>Convert byte slice to a str</li>
+<li>Convert the str to an i64</li>
+</ol>
+
+<p>
+This process can fail on steps 2 and 3. Rust requires that strings are uft-8 encoded, so converting to a str can fail. Then someone
+could pass "abc" as the int, so converting to <code>i64</code> can fail. Keeping those in mind, we can now write the <code>int</code> function:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">int</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #89C5C8;">i64</span><span style="color: #DDCC9C;">)</span><span style="color: #CCF8CC;">&gt;</span>, <span style="color: #89C5C8;">RESPError</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">match</span> word<span style="color: #CCF8CC;">(</span>buf, pos<span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, word<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #DDCC9C;">{</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">word.as_slice(buf) is the method call BufSplit::as_slice(&amp;self, &amp;BytesMut) to access the byte slice.</span>
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">s</span> = <span style="color: #89C5C8;">str</span>::from_utf8<span style="color: #A0EDF0;">(</span>word.as_slice<span style="color: #ACD2AC;">(</span>buf<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>.map_err<span style="color: #A0EDF0;">(</span>|_| <span style="color: #89C5C8;">RESPError</span>::<span style="color: #89C5C8;">IntParseFailure</span><span style="color: #A0EDF0;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span>;
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Convert the string to an i64. Note the `?` for early returns.</span>
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">i</span> = s.parse<span style="color: #A0EDF0;">()</span>.map_err<span style="color: #A0EDF0;">(</span>|_| <span style="color: #89C5C8;">RESPError</span>::<span style="color: #89C5C8;">IntParseFailure</span><span style="color: #A0EDF0;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span>;
+            <span style="color: #89C5C8;">Ok</span><span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #ACD2AC;">(</span><span style="color: #9CC7FB;">(</span>pos, i<span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>
+        <span style="color: #DDCC9C;">}</span>
+        <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">None</span><span style="color: #DDCC9C;">)</span>,
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Nice, so we can grab ints from the input. We only need a trivial function to get the desired <code>RedisResult</code> type:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">resp_int</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">RedisResult</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Ok</span><span style="color: #CCF8CC;">(</span>int<span style="color: #DDCC9C;">(</span>buf, pos<span style="color: #DDCC9C;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span>.map<span style="color: #DDCC9C;">(</span>|<span style="color: #A0EDF0;">(</span>pos, int<span style="color: #A0EDF0;">)</span>| <span style="color: #A0EDF0;">(</span>pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">Int</span><span style="color: #ACD2AC;">(</span>int<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span><span style="color: #CCF8CC;">)</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org4869bb5" class="outline-3">
+<h3 id="org4869bb5">Bulk Strings</h3>
+<div class="outline-text-3" id="text-org4869bb5">
+<p>
+So bulk strings in RESP start with a length (<code>i64</code>), and then the string content (delimited by CLRF of course).
+So we can use our previous <code>int</code> function, and then work through the possible cases (see second code block for comments).
+</p>
+
+<p>
+Here's the code without comments:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">bulk_string</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">RedisResult</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">match</span> int<span style="color: #CCF8CC;">(</span>buf, pos<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, -<span style="color: #CCF8CC;">1</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #A0EDF0;">(</span><span style="color: #ACD2AC;">(</span>pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">NullBulkString</span><span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, size<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> <span style="color: #FDECBC; font-weight: bold;">if</span> size &gt;= <span style="color: #CCF8CC;">0</span> =&gt; <span style="color: #DDCC9C;">{</span>
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">total_size</span> = pos + size <span style="color: #FDECBC; font-weight: bold;">as</span> <span style="color: #89C5C8;">usize</span>;
+            <span style="color: #FDECBC; font-weight: bold;">if</span> buf.len<span style="color: #A0EDF0;">()</span> &lt; total_size + <span style="color: #CCF8CC;">2</span> <span style="color: #A0EDF0;">{</span>
+                <span style="color: #89C5C8;">Ok</span><span style="color: #ACD2AC;">(</span><span style="color: #89C5C8;">None</span><span style="color: #ACD2AC;">)</span>
+            <span style="color: #A0EDF0;">}</span> <span style="color: #FDECBC; font-weight: bold;">else</span> <span style="color: #A0EDF0;">{</span>
+                <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">bb</span> = <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">String</span><span style="color: #ACD2AC;">(</span><span style="color: #89C5C8;">BufSplit</span><span style="color: #9CC7FB;">(</span>pos, total_size<span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span>;
+                <span style="color: #89C5C8;">Ok</span><span style="color: #ACD2AC;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #9CC7FB;">(</span><span style="color: #EDDCAC;">(</span>total_size + <span style="color: #CCF8CC;">2</span>, bb<span style="color: #EDDCAC;">)</span><span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span>
+            <span style="color: #A0EDF0;">}</span>
+        <span style="color: #DDCC9C;">}</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>_pos, bad_size<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Err</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">RESPError</span>::<span style="color: #89C5C8;">BadBulkStringSize</span><span style="color: #A0EDF0;">(</span>bad_size<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">None</span><span style="color: #DDCC9C;">)</span>,
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And here's the same code with comments explaining what's going on:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">bulk_string</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">RedisResult</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">recall that the `pos` returned by `int` is the first index of the string content.</span>
+    <span style="color: #FDECBC; font-weight: bold;">match</span> int<span style="color: #CCF8CC;">(</span>buf, pos<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">special case: redis defines a NullBulkString type, with length of -1.</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, -<span style="color: #CCF8CC;">1</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #A0EDF0;">(</span><span style="color: #ACD2AC;">(</span>pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">NullBulkString</span><span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We have a size &gt;= 0</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, size<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> <span style="color: #FDECBC; font-weight: bold;">if</span> size &gt;= <span style="color: #CCF8CC;">0</span> =&gt; <span style="color: #DDCC9C;">{</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We trust the client here, and directly calculate the end index of string (absolute w.r.t pos)</span>
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">total_size</span> = pos + size <span style="color: #FDECBC; font-weight: bold;">as</span> <span style="color: #89C5C8;">usize</span>;
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">The client hasn't sent us enough bytes</span>
+            <span style="color: #FDECBC; font-weight: bold;">if</span> buf.len<span style="color: #A0EDF0;">()</span> &lt; total_size + <span style="color: #CCF8CC;">2</span> <span style="color: #A0EDF0;">{</span>
+                <span style="color: #89C5C8;">Ok</span><span style="color: #ACD2AC;">(</span><span style="color: #89C5C8;">None</span><span style="color: #ACD2AC;">)</span>
+            <span style="color: #A0EDF0;">}</span> <span style="color: #FDECBC; font-weight: bold;">else</span> <span style="color: #A0EDF0;">{</span>
+                <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We have enough bytes, so we can generate the correct type.</span>
+                <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">bb</span> = <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">String</span><span style="color: #ACD2AC;">(</span><span style="color: #89C5C8;">BufSplit</span><span style="color: #9CC7FB;">(</span>pos, total_size<span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span>;
+                <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">total_size + 2 == ...bulkstring\r\n&lt;HERE&gt; -- after CLRF</span>
+                <span style="color: #89C5C8;">Ok</span><span style="color: #ACD2AC;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #9CC7FB;">(</span><span style="color: #EDDCAC;">(</span>total_size + <span style="color: #CCF8CC;">2</span>, bb<span style="color: #EDDCAC;">)</span><span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span>
+            <span style="color: #A0EDF0;">}</span>
+        <span style="color: #DDCC9C;">}</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We recieved a garbage size (size &lt; -1), so error out</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>_pos, bad_size<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Err</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">RESPError</span>::<span style="color: #89C5C8;">BadBulkStringSize</span><span style="color: #A0EDF0;">(</span>bad_size<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Not enough bytes to parse an int (i.e. no CLRF to delimit the int)</span>
+        <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">None</span><span style="color: #DDCC9C;">)</span>,
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Now we have only one type left: Arrays.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgedc2107" class="outline-3">
+<h3 id="orgedc2107">Arrays: An Issue</h3>
+<div class="outline-text-3" id="text-orgedc2107">
+<p>
+Arrays are fundamentally more complex than other types as they are a <b>sequence</b> of redis values. We'll have to be more clever.
+They are defined as a size (<code>i64</code>) and then a <code>size</code> number of redis values. This is naturally recursive, as we can have arrays inside arrays.
+</p>
+
+<p>
+The issue is that we need a function which will parse redis values, as <code>fn array(..)</code> is only responsible for redis arrays.
+But that generic parse function will also need to call the array parser!
+</p>
+
+<p>
+Thankfully we can use some first year CS.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org3695774" class="outline-3">
+<h3 id="org3695774">Mutual Recursion: Top Level Parse Function and Arrays</h3>
+<div class="outline-text-3" id="text-org3695774">
+<p>
+Lets first define our top level parse function. It's responsible for taking a buffer and returning a <code>RedisResult</code>, agnostic to particular RESP types.
+RESP tags every element with a type byte, so our function is short:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">parse</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">RedisResult</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">if</span> buf.is_empty<span style="color: #CCF8CC;">()</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">None</span><span style="color: #DDCC9C;">)</span>;
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">match</span> buf<span style="color: #CCF8CC;">[</span>pos<span style="color: #CCF8CC;">]</span> <span style="color: #CCF8CC;">{</span>
+        b<span style="color: #D9A0A0;">'+'</span> =&gt; simple_string<span style="color: #DDCC9C;">(</span>buf, pos + <span style="color: #CCF8CC;">1</span><span style="color: #DDCC9C;">)</span>,
+        b<span style="color: #D9A0A0;">'-'</span> =&gt; error<span style="color: #DDCC9C;">(</span>buf, pos + <span style="color: #CCF8CC;">1</span><span style="color: #DDCC9C;">)</span>,
+        b<span style="color: #D9A0A0;">'$'</span> =&gt; bulk_string<span style="color: #DDCC9C;">(</span>buf, pos + <span style="color: #CCF8CC;">1</span><span style="color: #DDCC9C;">)</span>,
+        b<span style="color: #D9A0A0;">':'</span> =&gt; resp_int<span style="color: #DDCC9C;">(</span>buf, pos + <span style="color: #CCF8CC;">1</span><span style="color: #DDCC9C;">)</span>,
+        b<span style="color: #D9A0A0;">'*'</span> =&gt; array<span style="color: #DDCC9C;">(</span>buf, pos + <span style="color: #CCF8CC;">1</span><span style="color: #DDCC9C;">)</span>,
+        _ =&gt; <span style="color: #89C5C8;">Err</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">RESPError</span>::<span style="color: #89C5C8;">UnknownStartingByte</span><span style="color: #DDCC9C;">)</span>,
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+So <code>parse(..)</code> will check the byte at <code>pos</code> (initially 0), and use that to delegate to the correct function.
+Now this is very useful, and will allow us to write the array parser.
+</p>
+
+<p>
+Here's the code without comments:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">array</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">RedisResult</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">match</span> int<span style="color: #CCF8CC;">(</span>buf, pos<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">None</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, -<span style="color: #CCF8CC;">1</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #A0EDF0;">(</span><span style="color: #ACD2AC;">(</span>pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">NullArray</span><span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, num_elements<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> <span style="color: #FDECBC; font-weight: bold;">if</span> num_elements &gt;= <span style="color: #CCF8CC;">0</span> =&gt; <span style="color: #DDCC9C;">{</span>
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">values</span> = <span style="color: #89C5C8;">Vec</span>::with_capacity<span style="color: #A0EDF0;">(</span>num_elements <span style="color: #FDECBC; font-weight: bold;">as</span> <span style="color: #89C5C8;">usize</span><span style="color: #A0EDF0;">)</span>;
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">curr_pos</span> = pos;
+            <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">_</span> <span style="color: #FDECBC; font-weight: bold;">in</span> <span style="color: #CCF8CC;">0</span>..num_elements <span style="color: #A0EDF0;">{</span>
+                <span style="color: #FDECBC; font-weight: bold;">match</span> parse<span style="color: #ACD2AC;">(</span>buf, curr_pos<span style="color: #ACD2AC;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span> <span style="color: #ACD2AC;">{</span>
+                    <span style="color: #89C5C8;">Some</span><span style="color: #9CC7FB;">(</span><span style="color: #EDDCAC;">(</span>new_pos, value<span style="color: #EDDCAC;">)</span><span style="color: #9CC7FB;">)</span> =&gt; <span style="color: #9CC7FB;">{</span>
+                        curr_pos = new_pos;
+                        values.push<span style="color: #EDDCAC;">(</span>value<span style="color: #EDDCAC;">)</span>;
+                    <span style="color: #9CC7FB;">}</span>
+                    <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Ok</span><span style="color: #9CC7FB;">(</span><span style="color: #89C5C8;">None</span><span style="color: #9CC7FB;">)</span>,
+                <span style="color: #ACD2AC;">}</span>
+            <span style="color: #A0EDF0;">}</span>
+            <span style="color: #89C5C8;">Ok</span><span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #ACD2AC;">(</span><span style="color: #9CC7FB;">(</span>curr_pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">Array</span><span style="color: #EDDCAC;">(</span>values<span style="color: #EDDCAC;">)</span><span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>
+        <span style="color: #DDCC9C;">}</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>_pos, bad_num_elements<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Err</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">RESPError</span>::<span style="color: #89C5C8;">BadArraySize</span><span style="color: #A0EDF0;">(</span>bad_num_elements<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And the same code with comments:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">array</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">BytesMut</span>, <span style="color: #ECBC9C;">pos</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">RedisResult</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">match</span> int<span style="color: #CCF8CC;">(</span>buf, pos<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Not enough bytes to determine the array size</span>
+        <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">None</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">special value: NullArray. Has size -1.</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, -<span style="color: #CCF8CC;">1</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #A0EDF0;">(</span><span style="color: #ACD2AC;">(</span>pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">NullArray</span><span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Happy path. We have a valid size (num_elements &gt; 0)</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>pos, num_elements<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> <span style="color: #FDECBC; font-weight: bold;">if</span> num_elements &gt;= <span style="color: #CCF8CC;">0</span> =&gt; <span style="color: #DDCC9C;">{</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">As we're recieving a dynamic number of elements, we need to heap allocate our BufSplits.</span>
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">values</span> = <span style="color: #89C5C8;">Vec</span>::with_capacity<span style="color: #A0EDF0;">(</span>num_elements <span style="color: #FDECBC; font-weight: bold;">as</span> <span style="color: #89C5C8;">usize</span><span style="color: #A0EDF0;">)</span>;
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We're going to forward iterate on `curr_pos`</span>
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">curr_pos</span> = pos;
+            <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">_</span> <span style="color: #FDECBC; font-weight: bold;">in</span> <span style="color: #CCF8CC;">0</span>..num_elements <span style="color: #A0EDF0;">{</span>
+                <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Mutual Recursion! We need to parse the value at `curr_pos`</span>
+                <span style="color: #FDECBC; font-weight: bold;">match</span> parse<span style="color: #ACD2AC;">(</span>buf, curr_pos<span style="color: #ACD2AC;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span> <span style="color: #ACD2AC;">{</span>
+                    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We got a value, so add it to the `values` vector and</span>
+                    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">update `curr_pos`.</span>
+                    <span style="color: #89C5C8;">Some</span><span style="color: #9CC7FB;">(</span><span style="color: #EDDCAC;">(</span>new_pos, value<span style="color: #EDDCAC;">)</span><span style="color: #9CC7FB;">)</span> =&gt; <span style="color: #9CC7FB;">{</span>
+                        curr_pos = new_pos;
+                        values.push<span style="color: #EDDCAC;">(</span>value<span style="color: #EDDCAC;">)</span>;
+                    <span style="color: #9CC7FB;">}</span>
+                    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Not enough bytes. Abandon parsing and free vec.</span>
+                    <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Ok</span><span style="color: #9CC7FB;">(</span><span style="color: #89C5C8;">None</span><span style="color: #9CC7FB;">)</span>,
+                <span style="color: #ACD2AC;">}</span>
+            <span style="color: #A0EDF0;">}</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We had enough bytes to fully parse the array! Return it.</span>
+            <span style="color: #89C5C8;">Ok</span><span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #ACD2AC;">(</span><span style="color: #9CC7FB;">(</span>curr_pos, <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">Array</span><span style="color: #EDDCAC;">(</span>values<span style="color: #EDDCAC;">)</span><span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>
+        <span style="color: #DDCC9C;">}</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Client sent us a garbage size (num_elements &lt; -1)</span>
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span><span style="color: #A0EDF0;">(</span>_pos, bad_num_elements<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span> =&gt; <span style="color: #89C5C8;">Err</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">RESPError</span>::<span style="color: #89C5C8;">BadArraySize</span><span style="color: #A0EDF0;">(</span>bad_num_elements<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>,
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+So we can now parse arrays, and can now put everything together.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orge30edaf" class="outline-3">
+<h3 id="orge30edaf">Putting everything together</h3>
+<div class="outline-text-3" id="text-orge30edaf">
+<p>
+We're so close! We just need a few conversion functions before we can implement <code>Decoder</code>.
+Once we're done parsing, we're guaranteed to have a contiguous
+slice of memory that corresponds to the <code>RedisBufSplit</code> types we've generated until this moment. So we just need two functions:
+</p>
+
+<ol class="org-ol">
+<li>Take the large <code>Bytes</code> buffer and a <code>BufSplit(start,end)</code> slice into it to make a byte slice (also <code>Bytes</code> type)</li>
+<li>Take the <code>RedisBufSplit</code> and the large <code>Bytes</code> buffer and produce <code>RedisValueRef</code> types.</li>
+</ol>
+
+<p>
+The conversion function is actually pretty mechanical:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">First, we need a convenient way to convert our index pairs into byte slices.</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">BufSplit</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ACD2AC;">/// Get a Bytes object representing the appropriate slice</span>
+    <span style="color: #ACD2AC;">/// of bytes.</span>
+    <span style="color: #ACD2AC;">///</span>
+    <span style="color: #ACD2AC;">/// Constant time.</span>
+    <span style="color: #9CC7FB;">#</span><span style="color: #CCF8CC;">[</span><span style="color: #9CC7FB;">inline</span><span style="color: #CCF8CC;">]</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">as_bytes</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">Bytes</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Bytes</span> <span style="color: #CCF8CC;">{</span>
+        buf.slice<span style="color: #DDCC9C;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>.<span style="color: #CCF8CC;">0</span>..<span style="color: #FDECBC; font-weight: bold;">self</span>.<span style="color: #CCF8CC;">1</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Second, we'll need to convert a RedisBufSplit -&gt; RedisValueRef given a Bytes buffer.</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">RedisBufSplit</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">redis_value</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #89C5C8;">Bytes</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">RedisValueRef</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">match</span> <span style="color: #FDECBC; font-weight: bold;">self</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">bfs is BufSplit(start, end), which has the as_bytes method defined above</span>
+            <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">String</span><span style="color: #A0EDF0;">(</span>bfs<span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #89C5C8;">RedisValueRef</span>::<span style="color: #89C5C8;">String</span><span style="color: #A0EDF0;">(</span>bfs.as_bytes<span style="color: #ACD2AC;">(</span>buf<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>,
+            <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">Error</span><span style="color: #A0EDF0;">(</span>bfs<span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #89C5C8;">RedisValueRef</span>::<span style="color: #89C5C8;">Error</span><span style="color: #A0EDF0;">(</span>bfs.as_bytes<span style="color: #ACD2AC;">(</span>buf<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>,
+            <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">Array</span><span style="color: #A0EDF0;">(</span>arr<span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #A0EDF0;">{</span>
+                <span style="color: #89C5C8;">RedisValueRef</span>::<span style="color: #89C5C8;">Array</span><span style="color: #ACD2AC;">(</span>arr.into_iter<span style="color: #9CC7FB;">()</span>.map<span style="color: #9CC7FB;">(</span>|bfs| bfs.redis_value<span style="color: #EDDCAC;">(</span>buf<span style="color: #EDDCAC;">)</span><span style="color: #9CC7FB;">)</span>.collect<span style="color: #9CC7FB;">()</span><span style="color: #ACD2AC;">)</span>
+            <span style="color: #A0EDF0;">}</span>
+            <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">NullArray</span> =&gt; <span style="color: #89C5C8;">RedisValueRef</span>::<span style="color: #89C5C8;">NullArray</span>,
+            <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">NullBulkString</span> =&gt; <span style="color: #89C5C8;">RedisValueRef</span>::<span style="color: #89C5C8;">NullBulkString</span>,
+            <span style="color: #89C5C8;">RedisBufSplit</span>::<span style="color: #89C5C8;">Int</span><span style="color: #A0EDF0;">(</span>i<span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #89C5C8;">RedisValueRef</span>::<span style="color: #89C5C8;">Int</span><span style="color: #A0EDF0;">(</span>i<span style="color: #A0EDF0;">)</span>,
+        <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+We can now implement the <code>Decoder</code> trait so our parser fits in with the <code>tokio</code> machinery:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ACD2AC;">/// The struct we're using. We don't need to store anything in the struct.</span>
+<span style="color: #ACD2AC;">/// Later on we can expand this struct for optimization purposes.</span>
+<span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">derive</span><span style="color: #CCF8CC;">(</span><span style="color: #9CC7FB;">Default</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">RespParser</span>;
+
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">Decoder</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">RespParser</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Item</span> = <span style="color: #89C5C8;">RedisValueRef</span>;
+    <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Error</span> = <span style="color: #89C5C8;">RESPError</span>;
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">decode</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">buf</span>: &amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #89C5C8;">BytesMut</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Option</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #DDCC9C;">&gt;</span>, <span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Error</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">if</span> buf.is_empty<span style="color: #DDCC9C;">()</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Ok</span><span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">None</span><span style="color: #A0EDF0;">)</span>;
+        <span style="color: #DDCC9C;">}</span>
+
+        <span style="color: #FDECBC; font-weight: bold;">match</span> parse<span style="color: #DDCC9C;">(</span>buf, <span style="color: #CCF8CC;">0</span><span style="color: #DDCC9C;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #89C5C8;">Some</span><span style="color: #A0EDF0;">(</span><span style="color: #ACD2AC;">(</span>pos, value<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #A0EDF0;">{</span>
+                <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We parsed a value! Shave off the bytes so tokio can continue filling the buffer.</span>
+                <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">our_data</span> = buf.split_to<span style="color: #ACD2AC;">(</span>pos<span style="color: #ACD2AC;">)</span>;
+                <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Use `redis_value` defined above to get the correct type </span>
+                <span style="color: #89C5C8;">Ok</span><span style="color: #ACD2AC;">(</span><span style="color: #89C5C8;">Some</span><span style="color: #9CC7FB;">(</span>value.redis_value<span style="color: #EDDCAC;">(</span>&amp;our_data.freeze<span style="color: #9CBF9C;">()</span><span style="color: #EDDCAC;">)</span><span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span>
+            <span style="color: #A0EDF0;">}</span>
+            <span style="color: #89C5C8;">None</span> =&gt; <span style="color: #89C5C8;">Ok</span><span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">None</span><span style="color: #A0EDF0;">)</span>,
+        <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+We did it! We can now decode <code>RedisValueRef</code>'s from bytes off a socket!
+A complete parser includes <i>encoding</i> RedisValueRef's, but the code is pretty simple so you can <a href="https://github.com/dpbriggs/redis-oxide/blob/535333eae64c9709614b34d4450f32f57372bb3d/src/asyncresp.rs#L190">read it here</a>.
+You can view the <a href="https://github.com/dpbriggs/redis-oxide/blob/535333eae64c9709614b34d4450f32f57372bb3d/src/asyncresp.rs#L238">tests here</a> and how it's actually used in <a href="https://github.com/dpbriggs/redis-oxide/blob/535333eae64c9709614b34d4450f32f57372bb3d/src/server.rs#L44">redis-oxide here</a>.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgb48e3d7" class="outline-3">
+<h3 id="orgb48e3d7">Conclusion</h3>
+<div class="outline-text-3" id="text-orgb48e3d7">
+<p>
+Overall this 500+ line journey has netted us an efficient, zero copy RESP parser using parsing combinators.
+It was a lot of work to get the project refactored, but I am proud to have a solution I wrote myself and actually understand (no offense to the combine people). 
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: David Briggs</p>
+<p class="date">Created: 2020-02-02 Sun 18:47</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

@@ -22,12 +22,15 @@
                             Rust/Tokio/Redis
                         </li>
                         <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/dpbriggs-blog" target="_blank">
-                                dpbriggs-blog
+                            <a href="https://github.com/dpbriggs/convenient-skiplist" target="_blank">
+                                convenient-skiplist
                             </a>
                             <br>
-                            My personal website and blog.<br>
-                            Rust/Rocket/Bootstrap/Tera
+                            Performant and convenient Skiplist featuring easy serialization and
+                            advanced iterators.<br>
+                            Special focus on optimal time complexities.<br>
+                            Used in redis-oxide (sorted sets).<br>
+                            Rust/Iterator/Serde
                         </li>
                         <li class="list-group-item">
                             <a href="https://github.com/dpbriggs/growable-bloom-filters" target="_blank">
@@ -37,6 +40,14 @@
                             Generic, serializable scalable bloom filters in rust.<br>
                             Used in redis-oxide.<br>
                             Rust/Serde
+                        </li>
+                        <li class="list-group-item">
+                            <a href="https://github.com/dpbriggs/dpbriggs-blog" target="_blank">
+                                dpbriggs-blog
+                            </a>
+                            <br>
+                            My personal website and blog.<br>
+                            Rust/Rocket/Bootstrap/Tera
                         </li>
                         <li class="list-group-item">
                             <a href="https://github.com/dpbriggs/kv" target="_blank">
