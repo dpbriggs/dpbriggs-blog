@@ -16,7 +16,7 @@
     {% for blog in blog.blog_files %}
     <li class="nav-item">
         <a href="{{ base.blog_uri}}/{{blog.slug}}">
-            - {{ blog.title }}
+            <p> {{ blog.title }} </p>
             <span class="sr-only">(current)</span>
         </a>
     </li>

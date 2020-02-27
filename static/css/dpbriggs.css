@@ -71,7 +71,7 @@ ul,li {
 .bordered {
     border: 3px solid grey;
     padding: 10px;
-    box-sizing: border-box
+    box-sizing: border-box;
 }
 
 .navbar-underlined {
@@ -179,3 +179,4 @@ table {
     /* border-bottom: black 1px !important; */
     padding-bottom: 10px;
 }
+
