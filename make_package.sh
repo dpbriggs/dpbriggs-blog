@@ -6,6 +6,7 @@ TMP_FOLDER=$(mktemp -d)
 cp $BIN_FOLDER/$BIN_NAME $TMP_FOLDER
 cp -r blog $TMP_FOLDER
 cp -r static $TMP_FOLDER
+cp -r systemd $TMP_FOLDER
 cp -r templates $TMP_FOLDER
 cp -r resume $TMP_FOLDER
 cp -r caddy $TMP_FOLDER
