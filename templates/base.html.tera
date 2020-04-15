@@ -4,7 +4,7 @@
         {% include "head" %}
         <title>
             {% block title %}
-            {{ base.domain_name }}
+            dpbriggs / {{ kv.title }}
             {% endblock title %}
         </title>
     </head>

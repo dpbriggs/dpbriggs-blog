@@ -6,3 +6,4 @@ Cargo.lock
 *.pdf
 auto/
 *.tex
+.caddy_env

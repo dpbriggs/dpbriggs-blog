@@ -11,20 +11,21 @@ use rocket::Route;
 // And just like that, months and months later,
 // it just works.
 macro_rules! simple_route {
-    ($name:ident, $route:literal) => {
+    ($name:ident, $route:literal, $title:literal) => {
         #[get($route)]
         fn $name() -> Template {
-            let context = get_base_context($route);
+            let mut context = get_base_context($route);
+            context.kv.insert("title".to_owned(), $title.to_owned());
             Template::render(get_template($route), context)
         }
     };
 }
 
-simple_route! {index, "/"}
-simple_route! {resume, "/resume"}
-simple_route! {blog_index, "/blog"}
-simple_route! {linkedin, "/linkedin"}
-simple_route! {github, "/github"}
+simple_route! {index, "/", "home"}
+simple_route! {resume, "/resume", "resume"}
+simple_route! {blog_index, "/blog", "blog"}
+simple_route! {linkedin, "/linkedin", "linkedin"}
+simple_route! {github, "/github", "github"}
 
 #[get("/resume_pdf")]
 fn resume_pdf() -> std::io::Result<NamedFile> {
@@ -39,6 +40,7 @@ fn crash() -> Result<String, Status> {
 #[get("/blog/<slug>")]
 fn blog_article(slug: String) -> Option<Template> {
     let mut context = get_base_context("/blog");
+    context.kv.insert("title".to_owned(), "blog".to_owned());
     context.blog.html.get(&slug).map(|curr_blog| {
         context.curr_blog = Some(curr_blog);
         context.kv.insert("curr_slug".to_owned(), slug);
@@ -50,6 +52,7 @@ fn blog_article(slug: String) -> Option<Template> {
 fn not_found(req: &Request) -> Template {
     let mut context = get_base_context("/");
     context.kv.insert("uri".to_owned(), req.uri().to_string());
+    context.kv.insert("title".to_owned(), "404".to_owned());
     Template::render(get_template("404"), context)
 }
 
@@ -57,6 +60,7 @@ fn not_found(req: &Request) -> Template {
 fn server_err(req: &Request) -> Template {
     let mut context = get_base_context("/");
     context.kv.insert("uri".to_owned(), req.uri().to_string());
+    context.kv.insert("title".to_owned(), "500".to_owned());
     Template::render(get_template("500"), context)
 }
 

@@ -1,0 +1,14 @@
+[Unit]
+Description=dpbriggs.ca website caddy
+
+[Service]
+ExecStart=/home/david/run_caddy.sh
+Restart=always
+RuntimeMaxSec=86400
+LimitAS=infinity
+LimitRSS=infinity
+LimitCORE=infinity
+LimitNOFILE=8192
+
+[Install]
+WantedBy=default.target
