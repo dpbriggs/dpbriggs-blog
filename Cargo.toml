@@ -5,7 +5,7 @@ authors = ["David Briggs <dpbriggs@edu.uwaterloo.ca>"]
 edition = "2018"
 
 [dependencies]
-rocket = "0.4.2"
+rocket = "0.4.4"
 lazy_static = "1.4.0"
 select = "0.4.3"
 serde = "1.0.102"

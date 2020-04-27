@@ -49,7 +49,7 @@ fn blog_article(slug: String) -> Option<Template> {
 }
 
 #[catch(404)]
-fn not_found(req: &Request) -> Template {
+fn not_found(req: &Request<'_>) -> Template {
     let mut context = get_base_context("/");
     context.kv.insert("uri".to_owned(), req.uri().to_string());
     context.kv.insert("title".to_owned(), "404".to_owned());
@@ -57,7 +57,7 @@ fn not_found(req: &Request) -> Template {
 }
 
 #[catch(500)]
-fn server_err(req: &Request) -> Template {
+fn server_err(req: &Request<'_>) -> Template {
     let mut context = get_base_context("/");
     context.kv.insert("uri".to_owned(), req.uri().to_string());
     context.kv.insert("title".to_owned(), "500".to_owned());

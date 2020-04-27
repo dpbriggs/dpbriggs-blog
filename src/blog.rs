@@ -1,5 +1,5 @@
-extern crate chrono;
-extern crate select;
+use chrono;
+use select;
 
 use chrono::NaiveDate;
 use select::document::Document;

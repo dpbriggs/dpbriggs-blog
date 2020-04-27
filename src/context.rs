@@ -83,7 +83,7 @@ lazy_static! {
 }
 
 /// get_base_context
-pub fn get_base_context(nav_href_uri: &str) -> SiteContext {
+pub fn get_base_context(nav_href_uri: &str) -> SiteContext<'_> {
     SiteContext {
         base: &STATIC_SITE_CONTEXT_KV,
         kv: {

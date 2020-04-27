@@ -1,14 +1,13 @@
+#![warn(rust_2018_idioms)]
 #![feature(proc_macro_hygiene, decl_macro)]
 #![feature(plugin)]
 #[macro_use]
 extern crate rocket;
-extern crate lazy_static;
-extern crate rocket_contrib;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate log;
-extern crate simple_logger;
+use simple_logger;
 
 #[cfg(test)]
 mod tests;
