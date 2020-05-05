@@ -27,6 +27,17 @@ simple_route! {blog_index, "/blog", "blog"}
 simple_route! {linkedin, "/linkedin", "linkedin"}
 simple_route! {github, "/github", "github"}
 
+#[get("/robots.txt")]
+fn robots_txt() -> std::io::Result<&'static str> {
+    // NamedFile::open(get_template("/resume_pdf"))
+    let robots_txt = r#"
+# robots.txt
+User-agent: *
+Disallow:
+"#;
+    Ok(robots_txt)
+}
+
 #[get("/resume_pdf")]
 fn resume_pdf() -> std::io::Result<NamedFile> {
     NamedFile::open(get_template("/resume_pdf"))
@@ -75,6 +86,7 @@ pub fn get_routes() -> (StaticFiles, Vec<Route>, Vec<Catcher>) {
             linkedin,
             github,
             resume_pdf,
+            robots_txt,
             blog_article
         ],
         catchers![server_err, not_found],
