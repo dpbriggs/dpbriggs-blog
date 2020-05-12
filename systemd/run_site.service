@@ -1,14 +1,12 @@
 [Unit]
 Description=dpbriggs.ca website rocket
+After=network.target
 
 [Service]
-ExecStart=/home/david/run_site.sh
-Restart=always
-RuntimeMaxSec=43200
-LimitAS=infinity
-LimitRSS=infinity
-LimitCORE=infinity
-LimitNOFILE=8192
+Type=simple
+ExecStart=/home/david/dpbriggs-blog
+WorkingDirectory=/home/david
+Restart=on-failure
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

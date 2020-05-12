@@ -1,9 +1,5 @@
 dpbriggs.ca www.dpbriggs.ca
 
-gzip
+encode gzip
 
-proxy / localhost:8000
-
-tls {
-    dns cloudflare
-}
+reverse_proxy localhost:8000

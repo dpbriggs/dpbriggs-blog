@@ -1,0 +1,1227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2020-05-12 Tue 14:54 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rust Traits: Iterator</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="David Briggs" />
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Rust Traits: Iterator</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orgee7b554">Rust Traits: Iterator</a>
+<ul>
+<li><a href="#orgb007c76">The Basics</a></li>
+<li><a href="#orgefbc3bd">The Iterator Trait</a>
+<ul>
+<li><a href="#org71f8bfe">The Foundation</a></li>
+<li><a href="#org9e867b0">The Thousand Elided Methods</a></li>
+<li><a href="#org46ae7c7">The collect() Method</a></li>
+</ul>
+</li>
+<li><a href="#orgdd791f4">Part 1: The Natural Numbers</a>
+<ul>
+<li><a href="#org27a8f9a">Implementing Map</a></li>
+<li><a href="#orgbf58474">Filter</a></li>
+<li><a href="#orgbc03213">Reduce</a></li>
+<li><a href="#orgb222ccc">Quick note on reduce</a></li>
+</ul>
+</li>
+<li><a href="#org44f7662">Part 2: Our own Iterator Trait</a></li>
+<li><a href="#org3b0c2ad">Conclusion</a></li>
+<li><a href="#org9712279">Appendix: The Primes</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+<span class="timestamp-wrapper"><span class="timestamp">&lt;2020-04-27 Mon&gt;</span></span>
+</p>
+
+<div id="outline-container-orgee7b554" class="outline-2">
+<h2 id="orgee7b554">Rust Traits: Iterator</h2>
+<div class="outline-text-2" id="text-orgee7b554">
+<p>
+The <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html">Iterator</a> trait in Rust allows you to conveniently operate over a sequence of elements.
+They provide an expressive, functional, convenient, and performant way to do computations.
+</p>
+
+<p>
+This article will focus on the mechanics of the trait and offer a deeper look into it.
+If you're not already familiar with traits in Rust, I recommend skimming the <a href="https://doc.rust-lang.org/book/ch10-02-traits.html">rust book chapter</a> before reading this article.
+</p>
+</div>
+
+<div id="outline-container-orgb007c76" class="outline-3">
+<h3 id="orgb007c76">The Basics</h3>
+<div class="outline-text-3" id="text-orgb007c76">
+<p>
+Iterators are very common in Rust, and if you've written Rust you have likely used them.
+Here is a basic example:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">val</span> <span style="color: #FDECBC; font-weight: bold;">in</span> <span style="color: #CCF8CC;">0</span>..<span style="color: #CCF8CC;">10</span> <span style="color: #DCDCCC;">{</span>
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">... use val</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+<code>0..10</code> is a <code>Range</code>, which implements <code>Iterator</code>, which is central to the function of for-loops.
+</p>
+
+<p>
+You may have written something more complex as well:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">v1</span> = <span style="color: #9CC7FB;">vec!</span><span style="color: #DCDCCC;">[</span><span style="color: #CCF8CC;">1</span>, <span style="color: #CCF8CC;">2</span>, <span style="color: #CCF8CC;">3</span><span style="color: #DCDCCC;">]</span>;
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">v2</span> = <span style="color: #9CC7FB;">vec!</span><span style="color: #DCDCCC;">[</span><span style="color: #CCF8CC;">4</span>, <span style="color: #CCF8CC;">5</span>, <span style="color: #CCF8CC;">6</span><span style="color: #DCDCCC;">]</span>;
+
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">dot_product</span>: <span style="color: #89C5C8;">u32</span> = v1
+    .iter<span style="color: #DCDCCC;">()</span>
+    .zip<span style="color: #DCDCCC;">(</span>v2<span style="color: #DCDCCC;">)</span>
+    .map<span style="color: #DCDCCC;">(</span>|<span style="color: #CCF8CC;">(</span>l, r<span style="color: #CCF8CC;">)</span>| l * r<span style="color: #DCDCCC;">)</span>
+    .sum<span style="color: #DCDCCC;">()</span>; <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">32</span>
+</pre>
+</div>
+
+
+<p>
+Either way, we're iterating and operating on some sequence of values. The <code>Iterator</code> trait provides
+convenient ways to construct, transform, and consume these sequences.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgefbc3bd" class="outline-3">
+<h3 id="orgefbc3bd">The Iterator Trait</h3>
+<div class="outline-text-3" id="text-orgefbc3bd">
+<p>
+The <code>Iterator</code> trait could be thought as having three parts:
+</p>
+
+<ol class="org-ol">
+<li>The foundation: a <code>next()</code> function which returns some type <code>Item</code> if it can.</li>
+<li>Lots and lots of methods for iterator transformations (e.g. functional tools like <code>map</code> and <code>filter</code>).</li>
+<li>A function called <code>collect()</code>, which allows you to evaluate iterators into some collection type.</li>
+</ol>
+</div>
+
+
+<div id="outline-container-org71f8bfe" class="outline-4">
+<h4 id="org71f8bfe">The Foundation</h4>
+<div class="outline-text-4" id="text-org71f8bfe">
+<p>
+The foundation to the <code>Iterator</code> is a type <code>Item</code>, and a method <code>next()</code> which returns <code>Option&lt;Item&gt;</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">trait</span> <span style="color: #89C5C8;">Iterator</span> <span style="color: #DCDCCC;">{</span>
+  <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Item</span>;
+  <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">next</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">&gt;</span>;
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">... several elided methods</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Annotated with comments:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">trait</span> <span style="color: #89C5C8;">Iterator</span> <span style="color: #DCDCCC;">{</span>
+  <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Item</span>;
+  <span style="color: #6C8C6C;">//   </span><span style="color: #8CAC8C;">^-- Associated type; the type we are returning each iteration</span>
+  <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">next</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">&gt;</span>;
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">^    ^             ^ returns either an Item, or nothing</span>
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">|    | it mutates something each iteration</span>
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">| `next` method gets somehow called each iteration in for-loops</span>
+
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">... several elided methods</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+The trait signature tells us a lot about how it works:
+</p>
+
+<ol class="org-ol">
+<li>We need to mutate the type for which we implement Iterator (something needs to book-keep).</li>
+<li>If we have a value to yield, return <code>Some(val)</code>
+<ol class="org-ol">
+<li>Otherwise, stop iteration by yielding <code>None</code></li>
+</ol></li>
+<li>We return the same type each iteration.</li>
+</ol>
+
+<p>
+So now that we've seen the foundation, let's preview some <code>Iterator</code> trait methods for transforming iterators.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org9e867b0" class="outline-4">
+<h4 id="org9e867b0">The Thousand Elided Methods</h4>
+<div class="outline-text-4" id="text-org9e867b0">
+<p>
+While it's nice that we can cleanly define a way to retrieve a single element at a time from a collection,
+it would be very nice to operate on the iterable itself. The <code>Iterator</code> trait provides a LOT of functions
+to conveniently work with iterators in a functional style. We can succinctly express more complex logic with
+these methods &#x2013; for example:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">some_iterable</span> = <span style="color: #CCF8CC;">0</span>..<span style="color: #CCF8CC;">100</span>;
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">sum</span> = some_iterable
+    .filter<span style="color: #DCDCCC;">(</span>|&amp;e| e &gt; <span style="color: #CCF8CC;">50</span><span style="color: #DCDCCC;">)</span>
+    .map<span style="color: #DCDCCC;">(</span>|e| e * e<span style="color: #DCDCCC;">)</span>
+    .sum<span style="color: #DCDCCC;">()</span>;
+</pre>
+</div>
+
+<p>
+vs
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">some_iterable</span> = <span style="color: #CCF8CC;">0</span>..<span style="color: #CCF8CC;">100</span>;
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">sum</span> = <span style="color: #CCF8CC;">0</span>;
+<span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">e</span> <span style="color: #FDECBC; font-weight: bold;">in</span> some_iterable <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">if</span> e &gt; <span style="color: #CCF8CC;">50</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">continue</span>;
+    <span style="color: #CCF8CC;">}</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">doubled</span> = e * e;
+    sum += doubled;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+I personally find the first far easier to read as it requires much less parsing. This isn't always true of iterators in Rust,
+but most of the time it is.
+</p>
+
+<p>
+Other methods we'll use for this article include <code>Iterator::take(N)</code>, which only takes up-to N elements from the iterator.
+This is useful for infinite iterators, and is common in functional languages.
+</p>
+
+<p>
+You can view a list of the iterator methods <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#provided-methods">here</a>.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org46ae7c7" class="outline-4">
+<h4 id="org46ae7c7">The collect() Method</h4>
+<div class="outline-text-4" id="text-org46ae7c7">
+<p>
+While important, this article won't focus much on the mechanics of <code>collect()</code>. In short, <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.collect">this method</a> uses the <a href="https://doc.rust-lang.org/std/iter/trait.FromIterator.html">FromIterator</a> trait
+to convert iterators into some collection. You'll find yourself using this often when working with iterators to convert
+them into tangible and convenient types.
+</p>
+
+<p>
+There's a good example of <code>collect()</code> <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#examples-25">here</a>.
+</p>
+
+<p>
+Now that we've seen an overview of what's provided, we can implement Iterator!
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgdd791f4" class="outline-3">
+<h3 id="orgdd791f4">Part 1: The Natural Numbers</h3>
+<div class="outline-text-3" id="text-orgdd791f4">
+<p>
+To get more familiar with the trait, let's make a useful construct: The Natural Numbers.
+</p>
+
+<p>
+To implement this, we'll need a struct holding the current value:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Book keeping struct</span>
+<span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">NaturalNumbers</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ECBC9C;">curr</span>: <span style="color: #89C5C8;">u32</span>,
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Start at 0 because computers</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">NaturalNumbers</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">new</span><span style="color: #CCF8CC;">()</span> -&gt; <span style="color: #89C5C8;">Self</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Self</span> <span style="color: #DDCC9C;">{</span> <span style="color: #ECBC9C;">curr</span>: <span style="color: #CCF8CC;">0</span> <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And implement Iterator by incrementing <code>curr</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">Iterator</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">NaturalNumbers</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Item</span> = <span style="color: #89C5C8;">u32</span>;
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">next</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">ret</span> = <span style="color: #FDECBC; font-weight: bold;">self</span>.curr;
+        <span style="color: #FDECBC; font-weight: bold;">self</span>.curr += <span style="color: #CCF8CC;">1</span>;
+        <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span>ret<span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Nice! We have a struct <code>NaturalNumbers</code> which will yield every natural number until it panics on overflow.
+</p>
+
+<p>
+This is certainly useful, and will serve as a bedrock for later functions. Unfortunately our terminals don't appreciate
+printing millions of integers, so we'll use the method <code>Iterator::take(N)</code> which limits the number of iterations to at most <code>N</code>.
+</p>
+
+<p>
+We can then test <code>NaturalNumbers</code> with:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">i</span> <span style="color: #FDECBC; font-weight: bold;">in</span> <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #CCF8CC;">()</span>.take<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">5</span><span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #DDCC9C;">(</span><span style="color: #D9A0A0;">"</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, i<span style="color: #DDCC9C;">)</span>;
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Which outputs:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash">~ cargo run
+   Compiling iterator-article v0.1.0 <span style="color: #DCDCCC;">(</span>/home/david/programming/iterator-article<span style="color: #DCDCCC;">)</span>
+    Finished dev <span style="color: #DCDCCC;">[</span>unoptimized + debuginfo<span style="color: #DCDCCC;">]</span> target<span style="color: #DCDCCC;">(</span>s<span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">in</span> <span style="color: #CCF8CC;">0.15s</span>
+     Running <span style="color: #D9A0A0;">`target/debug/iterator-article`</span>
+<span style="color: #CCF8CC;">0</span>
+<span style="color: #CCF8CC;">1</span>
+<span style="color: #CCF8CC;">2</span>
+<span style="color: #CCF8CC;">3</span>
+<span style="color: #CCF8CC;">4</span>
+</pre>
+</div>
+
+<p>
+You can the run this example yourself on the <a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=2788c80f1014d5ac19fa345d97dcd408">Rust playground</a>!
+</p>
+
+<p>
+So now that we can generate a sequence of values, let's implement some familiar functional friends: <code>map</code>, <code>filter</code>, and <code>reduce</code> (<code>fold</code>).
+</p>
+</div>
+
+<div id="outline-container-org27a8f9a" class="outline-4">
+<h4 id="org27a8f9a">Implementing Map</h4>
+<div class="outline-text-4" id="text-org27a8f9a">
+<p>
+A frequent programming task is to loop over some collection and operate (transform) the type of an element given in each iteration.
+</p>
+
+<p>
+This occurs commonly when retrieving data from some source, and you need to bind the data in some useful construct (class / struct / etc).
+Or if you're crunching numbers you may want to operate on each element individually before some other step.
+</p>
+
+<p>
+Either way, this pattern is so common that most languages offer the <code>map</code> construct &#x2013; a way to provide an iterable and a function, and get
+the function applied to each element of the iterable returned.
+</p>
+
+<p>
+For example, let's double each number in a vector. Rust offers a <code>map()</code> method on iterators, so we'll use that first:
+</p>
+
+<p>
+Pseudo-code:
+</p>
+
+<pre class="example">
+seq: 0, 1, 2, 3, ...
+fn:  |e| e * e
+out: 0, 1, 4, 9, ...
+</pre>
+
+<p>
+Rust:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">input</span> = <span style="color: #9CC7FB;">vec!</span><span style="color: #DCDCCC;">[</span><span style="color: #CCF8CC;">1</span>, <span style="color: #CCF8CC;">2</span>, <span style="color: #CCF8CC;">3</span><span style="color: #DCDCCC;">]</span>;
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">doubled</span>: <span style="color: #89C5C8;">Vec</span><span style="color: #DCDCCC;">&lt;</span>_<span style="color: #DCDCCC;">&gt;</span> = input
+    .iter<span style="color: #DCDCCC;">()</span>
+    .map<span style="color: #DCDCCC;">(</span>|e| e * e<span style="color: #DCDCCC;">)</span>
+    .collect<span style="color: #DCDCCC;">()</span>;
+
+</pre>
+</div>
+
+<p>
+So we provide a function, <code>|e| e * e</code> which double numbers, and <code>map</code> implicitly takes <code>self</code>, which is an iterator.
+This may not make sense right now, so let's dig deeper into building our own <code>Map</code>.
+</p>
+
+<p>
+Things are going to get a little higher-order here, so let's outline what we'll need:
+</p>
+
+<ol class="org-ol">
+<li>We need a type <code>Iter</code>, which implements <code>Iterator</code></li>
+<li>We need a function, which maps <code>Iter::Item</code> to some output type <code>Out</code>
+<ol class="org-ol">
+<li>Syntax: <code>Iter::Item</code> is the associated type <code>Item</code> from implementation of <code>Iterator</code> on <code>Iter</code>.</li>
+<li>We can express the map function in Rust then as <code>FnMut(Iter::Item) -&gt; Out</code>
+<ol class="org-ol">
+<li>FnMut as we're consuming the element and may want to mutate captured variables. Feel free to use <code>Fn</code> if you don't want that. More on this later in the Reduce section.</li>
+</ol></li>
+</ol></li>
+</ol>
+
+<p>
+Putting the above together we'll need a struct to store our function and iterator:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"> <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Our Map struct</span>
+<span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">Map</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">Fn</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ECBC9C;">iter</span>: <span style="color: #89C5C8;">Iter</span>,
+    <span style="color: #ECBC9C;">f</span>: <span style="color: #89C5C8;">Fn</span>,
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We'll want to instantiate one later, so add a constructor method:</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">Fn</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">Map</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">Fn</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">new</span><span style="color: #CCF8CC;">(</span><span style="color: #ECBC9C;">iter</span>: <span style="color: #89C5C8;">Iter</span>, <span style="color: #ECBC9C;">f</span>: <span style="color: #89C5C8;">Fn</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Self</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Self</span> <span style="color: #DDCC9C;">{</span> iter, f <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+
+<p>
+Great, we can now tackle implementing Iterator. The first challenge is getting the types setup
+for our impl. As described above, we'll need an <code>Iter</code>, <code>F</code> (map fn), and <code>Out</code> types:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">F</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">Iterator</span> ...
+</pre>
+</div>
+
+<p>
+But we need further guarantees as described above:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #ECBC9C;">Iter</span>: <span style="color: #89C5C8;">Iterator</span>, <span style="color: #ECBC9C;">F</span>: <span style="color: #89C5C8;">FnMut</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Iter</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Out</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">Iterator</span> ...
+</pre>
+</div>
+
+<p>
+I recommend the reader really make sure the type signature above makes sense. Rust has a tendency to hit type soup,
+and it is worthwhile to take a minute to understand it.
+</p>
+
+<p>
+We can now implement <code>Iterator</code> in a straightforward way:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #ECBC9C;">Iter</span>: <span style="color: #89C5C8;">Iterator</span>, <span style="color: #ECBC9C;">F</span>: <span style="color: #89C5C8;">FnMut</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Iter</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Out</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">Iterator</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">Map</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">F</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Item</span> = <span style="color: #89C5C8;">Out</span>;
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">next</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">self</span>.iter.next<span style="color: #DDCC9C;">()</span>.map<span style="color: #DDCC9C;">(</span>|e| <span style="color: #A0EDF0;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>.f<span style="color: #A0EDF0;">)(</span>e<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+So we're calling <code>next()</code> on our stored iterator to iterate once, and mapping the value with our stored function,
+and returning it. This is very efficient and something that rustc / llvm love to optimize, which gives some insight
+into why Rust iterators are so fast.
+</p>
+
+<p>
+Now that we have it, let's use it!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">nat</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #CCF8CC;">()</span>.take<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">5</span><span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">seq</span> = <span style="color: #89C5C8;">Map</span>::new<span style="color: #CCF8CC;">(</span>nat, |e| e * e<span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">i</span> <span style="color: #FDECBC; font-weight: bold;">in</span> seq <span style="color: #CCF8CC;">{</span>
+        <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #DDCC9C;">(</span><span style="color: #D9A0A0;">"</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, i<span style="color: #DDCC9C;">)</span>;
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And run it:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash">$ cargo run
+     Compiling iterator-article v0.1.0 <span style="color: #DCDCCC;">(</span>/home/david/programming/iterator-article<span style="color: #DCDCCC;">)</span>
+      Finished dev <span style="color: #DCDCCC;">[</span>unoptimized + debuginfo<span style="color: #DCDCCC;">]</span> target<span style="color: #DCDCCC;">(</span>s<span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">in</span> <span style="color: #CCF8CC;">0.17s</span>
+       Running <span style="color: #D9A0A0;">`target/debug/iterator-article`</span>
+  <span style="color: #CCF8CC;">0</span>
+  <span style="color: #CCF8CC;">1</span>
+  <span style="color: #CCF8CC;">4</span>
+  <span style="color: #CCF8CC;">9</span>
+  <span style="color: #CCF8CC;">16</span>
+</pre>
+</div>
+
+<p>
+Nice! We can transform sequences using our own struct. If you want to see it in action yourself, you can play with it on the <a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=b28ba9529299e04dd3f0c67b053505eb">rust playground</a>.
+</p>
+
+<p>
+This is certainly powerful, but it would be nice to filter the element as well. <code>Map</code> only has access to a single element at a time, and must
+operate on the element. We can play around with the function types passed but most of the time we just want to filter out certain elements.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgbf58474" class="outline-4">
+<h4 id="orgbf58474">Filter</h4>
+<div class="outline-text-4" id="text-orgbf58474">
+<p>
+<code>Filter</code> is an interesting abstraction, as it concerns itself with retaining elements of a sequence which satisfy some criteria, and dropping the rest. The criteria function,
+or <i>predicate</i> function, borrows a value from the iterator and returns true or false. If the predicate evaluates to <code>true</code> on an element, return it to the caller.
+If the predicate is <code>false</code>, forget about it and continue searching.
+</p>
+
+<p>
+This abstraction is also very common in other languages, and is just as essential as <code>Map</code> for functional programming.
+</p>
+
+<p>
+The other wrinkle is that we need to care about ownership in Rust. <code>Map</code> would want to own each element as it needs to transform it,
+but filter just needs to borrow the element. We won't cover the magic involved with the <code>Fn</code> family and references, but this will work:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #89C5C8;">FnMut</span><span style="color: #DCDCCC;">(</span>&amp;<span style="color: #89C5C8;">Iter</span>::<span style="color: #89C5C8;">Item</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">bool</span>
+</pre>
+</div>
+
+<p>
+Our job is then similar to <code>Map</code>, we need a struct and constructor:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">struct to hold iterator and predicate function pointer</span>
+<span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">Filter</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">Predicate</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ECBC9C;">iter</span>: <span style="color: #89C5C8;">Iter</span>,
+    <span style="color: #ECBC9C;">pred</span>: <span style="color: #89C5C8;">Predicate</span>,
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">And a default constructor</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">Predicate</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">Filter</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">Predicate</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">new</span><span style="color: #CCF8CC;">(</span><span style="color: #ECBC9C;">iter</span>: <span style="color: #89C5C8;">Iter</span>, <span style="color: #ECBC9C;">pred</span>: <span style="color: #89C5C8;">Predicate</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Self</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Self</span> <span style="color: #DDCC9C;">{</span> iter, pred <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Same idea as <code>Map</code> &#x2013; store the iterator and function in a struct. Now we can implement <code>Iterator</code> in a similar fashion:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">Predicate</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">Iterator</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">Filter</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">Predicate</span><span style="color: #DCDCCC;">&gt;</span>
+<span style="color: #FDECBC; font-weight: bold;">where</span>
+    <span style="color: #ECBC9C;">Iter</span>: <span style="color: #89C5C8;">Iterator</span>,
+    <span style="color: #ECBC9C;">Predicate</span>: <span style="color: #89C5C8;">FnMut</span><span style="color: #DCDCCC;">(</span>&amp;<span style="color: #89C5C8;">Iter</span>::<span style="color: #89C5C8;">Item</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">bool</span>,
+<span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Item</span> = <span style="color: #89C5C8;">Iter</span>::<span style="color: #89C5C8;">Item</span>;
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">next</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">while</span> <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span>ele<span style="color: #DDCC9C;">)</span> = <span style="color: #FDECBC; font-weight: bold;">self</span>.iter.next<span style="color: #DDCC9C;">()</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #FDECBC; font-weight: bold;">if</span> <span style="color: #A0EDF0;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>.pred<span style="color: #A0EDF0;">)(</span>&amp;ele<span style="color: #A0EDF0;">)</span> <span style="color: #A0EDF0;">{</span>
+                <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Some</span><span style="color: #ACD2AC;">(</span>ele<span style="color: #ACD2AC;">)</span>;
+            <span style="color: #A0EDF0;">}</span>
+        <span style="color: #DDCC9C;">}</span>
+        <span style="color: #89C5C8;">None</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+We're again iterating over our underlying iterator, and then testing each element with our predicate.
+If it passes, we return the element. We're implicitly mutating <code>self.iter</code> as it's also an iterator, so
+no state is lost. When the caller calls <code>next()</code> we'll simply continue iterating where
+left off in <code>self.iter</code> and continue the process. Eventually we'll exhaust the underlying iterator and stop iteration by returning <code>None</code>.
+</p>
+
+<p>
+So now that we have it, let's use it! We'll build off of the <code>Map</code> example above to retain the even elements:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">nat</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #CCF8CC;">()</span>.take<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">10</span><span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">seq</span> = <span style="color: #89C5C8;">Map</span>::new<span style="color: #CCF8CC;">(</span>nat, |e| e * e<span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">seq</span> = <span style="color: #89C5C8;">Filter</span>::new<span style="color: #CCF8CC;">(</span>seq, |<span style="color: #ECBC9C;">e</span>: &amp;<span style="color: #89C5C8;">u32</span>| *e % <span style="color: #CCF8CC;">2</span> == <span style="color: #CCF8CC;">0</span><span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">i</span> <span style="color: #FDECBC; font-weight: bold;">in</span> seq <span style="color: #CCF8CC;">{</span>
+        <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #DDCC9C;">(</span><span style="color: #D9A0A0;">"</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, i<span style="color: #DDCC9C;">)</span>;
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Which when run prints out (<a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=44af002b33a4d95f3c79187ef4588e37">run it on the playground here</a>):
+</p>
+
+<pre class="example">
+~ cargo run
+    Finished dev [unoptimized + debuginfo] target(s) in 0.04s
+     Running `target/debug/iterator-article`
+0
+4
+16
+36
+64
+</pre>
+
+<p>
+Great! We can now selectively retain elements in a sequence. The final tool to make is <code>reduce</code> (also called <code>fold</code>) which is the most powerful tool yet.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgbc03213" class="outline-4">
+<h4 id="orgbc03213">Reduce</h4>
+<div class="outline-text-4" id="text-orgbc03213">
+<p>
+The motivation for <code>reduce</code> (<code>fold</code> in Rust) is pretty simple: We need a way to collapse entire sequences into some type. <code>Map</code> and <code>Filter</code> only operate on
+each element one a time, not an entire sequence. How would we sum all numbers in a list?
+</p>
+
+<p>
+The mechanics are pretty simple thankfully:
+</p>
+
+<ol class="org-ol">
+<li>We have a base type; the accumulator. In the summing example, this would be 0.</li>
+<li>We have a function <code>FnMut(acc, ele) -&gt; acc</code> which melds the accumulator and the given element.</li>
+</ol>
+
+<p>
+For example, to multiply a list of integers we will need:
+</p>
+
+<ol class="org-ol">
+<li>The accumulator, with initial value <code>1</code>.</li>
+<li>the function <code>|acc, ele| acc * ele</code></li>
+<li>A list <code>[1, 2, 3]</code></li>
+</ol>
+
+<p>
+We can view the computation with the table below:
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" width="50%">
+<caption class="t-above"><span class="table-number">Table 1:</span> Final result: 6</caption>
+
+<colgroup>
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">iter</th>
+<th scope="col" class="org-right">acc</th>
+<th scope="col" class="org-right">ele</th>
+<th scope="col" class="org-right">product</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">1</td>
+<td class="org-right">1</td>
+<td class="org-right">1</td>
+<td class="org-right">1</td>
+</tr>
+
+<tr>
+<td class="org-right">2</td>
+<td class="org-right">1</td>
+<td class="org-right">2</td>
+<td class="org-right">2</td>
+</tr>
+
+<tr>
+<td class="org-right">3</td>
+<td class="org-right">2</td>
+<td class="org-right">3</td>
+<td class="org-right">6</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+So the idea is to accumulate values into the accumulator. We don't need the <code>Iterator</code> trait just yet, so we can implement <code>reduce</code> with a free standing function:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">reduce</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Acc</span>, <span style="color: #89C5C8;">Iter</span>, <span style="color: #89C5C8;">ReduceFn</span><span style="color: #DCDCCC;">&gt;(</span><span style="color: #ECBC9C;">iterator</span>: <span style="color: #89C5C8;">Iter</span>, <span style="color: #ECBC9C;">acc</span>: <span style="color: #89C5C8;">Acc</span>, <span style="color: #ECBC9C;">reducefn</span>: <span style="color: #89C5C8;">ReduceFn</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Acc</span>
+<span style="color: #FDECBC; font-weight: bold;">where</span>
+    <span style="color: #ECBC9C;">Iter</span>: <span style="color: #89C5C8;">Iterator</span>,
+    <span style="color: #ECBC9C;">ReduceFn</span>: <span style="color: #89C5C8;">Fn</span><span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">Acc</span>, <span style="color: #89C5C8;">Iter</span>::<span style="color: #89C5C8;">Item</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Acc</span>,
+<span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">acc</span> = acc;
+    <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">ele</span> <span style="color: #FDECBC; font-weight: bold;">in</span> iterator <span style="color: #CCF8CC;">{</span>
+        acc = reducefn<span style="color: #DDCC9C;">(</span>acc, ele<span style="color: #DDCC9C;">)</span>;
+    <span style="color: #CCF8CC;">}</span>
+    acc
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+We can now use it:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">nat</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #CCF8CC;">()</span>.take<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">4</span><span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">seq</span> = <span style="color: #89C5C8;">Filter</span>::new<span style="color: #CCF8CC;">(</span>nat, |<span style="color: #ECBC9C;">e</span>: &amp;<span style="color: #89C5C8;">u32</span>| *e &gt; <span style="color: #CCF8CC;">0</span><span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">prod</span> = reduce<span style="color: #CCF8CC;">(</span>seq, <span style="color: #CCF8CC;">1</span>, |acc, ele| acc * ele<span style="color: #CCF8CC;">)</span>;
+    <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, prod<span style="color: #CCF8CC;">)</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Which outputs <code>1 * 1 * 2 * 3 = 6</code> as expected (<a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=5630f5d4ef8e40f05a6dba0f50a4fc15">rust playground</a>):
+</p>
+
+<pre class="example">
+~ cargo run
+    Blocking waiting for file lock on build directory
+   Compiling iterator-article v0.1.0 (/home/david/programming/iterator-article)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.33s
+     Running `target/debug/iterator-article`
+6
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgb222ccc" class="outline-4">
+<h4 id="orgb222ccc">Quick note on reduce</h4>
+<div class="outline-text-4" id="text-orgb222ccc">
+<p>
+<code>reduce</code> is strictly more powerful than <code>Map</code> and <code>Filter</code> as it has access to the whole
+collection <span class="underline">and</span> an accumulator. We can easily implement <code>Filter</code> in terms of reduce
+for example:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">empty_vec</span> = <span style="color: #9CC7FB;">vec!</span><span style="color: #DCDCCC;">[]</span>;
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">bigger_than_five</span> = reduce<span style="color: #DCDCCC;">(</span>
+    <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #CCF8CC;">()</span>.take<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">10</span><span style="color: #CCF8CC;">)</span>,
+    &amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> empty_vec,
+    |acc, ele| <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">if</span> ele &gt; <span style="color: #CCF8CC;">5</span> <span style="color: #DDCC9C;">{</span>
+            acc.push<span style="color: #A0EDF0;">(</span>ele<span style="color: #A0EDF0;">)</span>;
+        <span style="color: #DDCC9C;">}</span>
+        acc
+    <span style="color: #CCF8CC;">}</span>,
+<span style="color: #DCDCCC;">)</span>;
+</pre>
+</div>
+
+<p>
+I would recommend playing around with this function. It's useful to internalize that
+reduce (fold) can produce <i>any</i> output type. However I would keep in mind that unnecessary uses of reduce like the
+example above removes access to the <code>Iterator</code> performance optimizations.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org44f7662" class="outline-3">
+<h3 id="org44f7662">Part 2: Our own Iterator Trait</h3>
+<div class="outline-text-3" id="text-org44f7662">
+<p>
+The following code is certainly nice:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">nat</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #DCDCCC;">()</span>.take<span style="color: #DCDCCC;">(</span><span style="color: #CCF8CC;">4</span><span style="color: #DCDCCC;">)</span>;
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">doubled</span> = <span style="color: #89C5C8;">Map</span>::new<span style="color: #DCDCCC;">(</span>nat, |e| e * e<span style="color: #DCDCCC;">)</span>;
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">seq</span> = <span style="color: #89C5C8;">Filter</span>::new<span style="color: #DCDCCC;">(</span>doubled, |<span style="color: #ECBC9C;">e</span>: &amp;<span style="color: #89C5C8;">u32</span>| *e % <span style="color: #CCF8CC;">2</span> == <span style="color: #CCF8CC;">0</span><span style="color: #DCDCCC;">)</span>;
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">prod</span> = reduce<span style="color: #DCDCCC;">(</span>seq, <span style="color: #CCF8CC;">1</span>, |acc, ele| acc * ele<span style="color: #DCDCCC;">)</span>;
+</pre>
+</div>
+
+<p>
+But this is far easier to read:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">prod</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #DCDCCC;">()</span>
+    .take<span style="color: #DCDCCC;">(</span><span style="color: #CCF8CC;">4</span><span style="color: #DCDCCC;">)</span>
+    .map<span style="color: #DCDCCC;">(</span>|e| e * e<span style="color: #DCDCCC;">)</span>
+    .filter<span style="color: #DCDCCC;">(</span>|<span style="color: #ECBC9C;">e</span>: &amp;<span style="color: #89C5C8;">u32</span>| *e % <span style="color: #CCF8CC;">2</span> == <span style="color: #CCF8CC;">0</span><span style="color: #DCDCCC;">)</span>
+    .reduce<span style="color: #DCDCCC;">(</span><span style="color: #CCF8CC;">1</span>, |acc, ele| acc * ele<span style="color: #DCDCCC;">)</span>;
+</pre>
+</div>
+
+<p>
+The question is then: How does <code>Iterator</code> provide this interface?
+</p>
+
+<p>
+As mentioned above, <code>Iterator</code> provides a whole bunch of default methods to facilitate this clean API.
+To better understand how this works, let's define our own <code>Iterator</code> trait:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">trait</span> <span style="color: #89C5C8;">MyIterator</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Item</span>;
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">next</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">&gt;</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And update our previous <code>Iterator</code> implementations:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-diff"><span style="color: #D9A0A0;">-</span><span style="color: #D9A0A0;">impl&lt;Iter,</span><span style="color: #DDCC9C;"> </span><span style="color: #D9A0A0;">Predicate&gt;</span><span style="color: #DDCC9C;"> </span><span style="color: #D9A0A0;">Iterator</span><span style="color: #DDCC9C;"> </span><span style="color: #D9A0A0;">for</span><span style="color: #DDCC9C;"> </span><span style="color: #D9A0A0;">Filter&lt;Iter,</span><span style="color: #DDCC9C;"> </span><span style="color: #D9A0A0;">Predicate&gt;</span>
+<span style="color: #CCF8CC;">+</span><span style="color: #CCF8CC;">impl&lt;Iter,</span><span style="color: #DDCC9C;"> </span><span style="color: #CCF8CC;">Predicate&gt;</span><span style="color: #DDCC9C;"> </span><span style="color: #CCF8CC;">MyIterator</span><span style="color: #DDCC9C;"> </span><span style="color: #CCF8CC;">for</span><span style="color: #DDCC9C;"> </span><span style="color: #CCF8CC;">Filter&lt;Iter,</span><span style="color: #DDCC9C;"> </span><span style="color: #CCF8CC;">Predicate&gt;</span>
+...
+</pre>
+</div>
+
+<p>
+You can view the whole refactor on the <a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=7105450011805c24c368ba521d7dfdf6">rust playground</a>. Unfortunately,
+our changes don't compile as we no longer have a <code>Iterator::take(N)</code> method:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">error<span style="color: #DCDCCC;">[</span><span style="color: #89C5C8;">E0599</span><span style="color: #DCDCCC;">]</span>: no method named `take` found <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #FDECBC; font-weight: bold;">struct</span> `<span style="color: #89C5C8;">NaturalNumbers</span>` <span style="color: #FDECBC; font-weight: bold;">in</span> the current scope
+   --&gt; src/main.<span style="color: #ECBC9C;">rs</span>:<span style="color: #CCF8CC;">116</span>:<span style="color: #CCF8CC;">37</span>
+    |
+<span style="color: #CCF8CC;">1</span>   | <span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">NaturalNumbers</span> <span style="color: #DCDCCC;">{</span>
+    | ---------------------
+    | |
+    | method `take` not found <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">this</span>
+    | doesn'<span style="color: #ECBC9C;">t</span> satisfy `<span style="color: #ECBC9C;">NaturalNumbers</span>: <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">iter</span>::<span style="color: #89C5C8;">Iterator</span>`
+...
+<span style="color: #CCF8CC;">116</span> |     <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">nat</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #CCF8CC;">()</span>.take<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">4</span><span style="color: #CCF8CC;">)</span>;
+    |                                     ^^^^ method not found <span style="color: #FDECBC; font-weight: bold;">in</span> `<span style="color: #89C5C8;">NaturalNumbers</span>`
+    |
+    = <span style="color: #ECBC9C;">note</span>: the method `take` exists but the following <span style="color: #FDECBC; font-weight: bold;">trait</span> bounds were not <span style="color: #ECBC9C;">satisfied</span>:
+            `<span style="color: #ECBC9C;">NaturalNumbers</span>: <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">iter</span>::<span style="color: #89C5C8;">Iterator</span>`
+            which is required by `&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">NaturalNumbers</span>: <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">iter</span>::<span style="color: #89C5C8;">Iterator</span>`
+    = <span style="color: #ECBC9C;">help</span>: items from traits can only be used <span style="color: #FDECBC; font-weight: bold;">if</span> the <span style="color: #FDECBC; font-weight: bold;">trait</span> is implemented and <span style="color: #FDECBC; font-weight: bold;">in</span> scope
+    = <span style="color: #ECBC9C;">note</span>: the following <span style="color: #FDECBC; font-weight: bold;">trait</span> defines an item `take`, perhaps you need to implement <span style="color: #ECBC9C;">it</span>:
+            candidate #<span style="color: #CCF8CC;">1</span>: `<span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">iter</span>::<span style="color: #89C5C8;">Iterator</span>`
+</pre>
+</div>
+
+<p>
+It's looking like we'll need to implement <code>Take</code> ourselves. It's a very similar process
+as before. We'll need a struct and <code>Iterator</code> implementation:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">Take</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ECBC9C;">iterator</span>: <span style="color: #89C5C8;">Iter</span>,
+    <span style="color: #ECBC9C;">left</span>: <span style="color: #89C5C8;">usize</span>,
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">Take</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">new</span><span style="color: #CCF8CC;">(</span><span style="color: #ECBC9C;">iterator</span>: <span style="color: #89C5C8;">Iter</span>, <span style="color: #ECBC9C;">left</span>: <span style="color: #89C5C8;">usize</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Self</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Self</span> <span style="color: #DDCC9C;">{</span> iterator, left <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #ECBC9C;">Iter</span>: <span style="color: #89C5C8;">MyIterator</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">MyIterator</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">Take</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Item</span> = <span style="color: #89C5C8;">Iter</span>::<span style="color: #89C5C8;">Item</span>;
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">next</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">if</span> <span style="color: #FDECBC; font-weight: bold;">self</span>.left &gt; <span style="color: #CCF8CC;">0</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #FDECBC; font-weight: bold;">self</span>.left -= <span style="color: #CCF8CC;">1</span>;
+            <span style="color: #FDECBC; font-weight: bold;">self</span>.iterator.next<span style="color: #A0EDF0;">()</span>
+        <span style="color: #DDCC9C;">}</span> <span style="color: #FDECBC; font-weight: bold;">else</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #89C5C8;">None</span>
+        <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Now that we have the struct, we need to modify <code>MyIterator</code> to achieve the desired API.
+Things will get a bit introspective, as we cannot refer to any concrete types. We instead
+rely on the <code>Self</code> language feature to specify that types which implement <code>MyIterator</code>
+will be the ones used in the method calls. We'll want to transfer ownership of iterators
+in these methods, so our <code>MyIterator::Take(N)</code> signature will read:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">take</span><span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">left</span>: <span style="color: #89C5C8;">usize</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Take</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Self</span><span style="color: #DCDCCC;">&gt;</span>
+</pre>
+</div>
+
+<p>
+The other wrinkle is that this won't compile, as the Rust compiler is not confident
+it can layout the <code>Take</code> struct properly, as <code>Self</code> can be <code>!Sized</code>. This can seem
+obscure, but the error message is pretty good:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">error<span style="color: #DCDCCC;">[</span><span style="color: #89C5C8;">E0277</span><span style="color: #DCDCCC;">]</span>: the size <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">values</span> of <span style="color: #FDECBC; font-weight: bold;">type</span> `<span style="color: #89C5C8;">Self</span>` cannot be known at compilation time
+   --&gt; src/main.<span style="color: #ECBC9C;">rs</span>:<span style="color: #CCF8CC;">116</span>:<span style="color: #CCF8CC;">37</span>
+    |
+<span style="color: #CCF8CC;">90</span>  | <span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">Take</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Iter</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    |             ---- required by this bound <span style="color: #FDECBC; font-weight: bold;">in</span> `<span style="color: #89C5C8;">Take</span>`
+...
+<span style="color: #CCF8CC;">116</span> |     <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">take</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">amount</span>: <span style="color: #89C5C8;">usize</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Take</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+    |                                     ^^^^^^^^^^- <span style="color: #ECBC9C;">help</span>: consider further restricting `<span style="color: #89C5C8;">Self</span>`: `<span style="color: #FDECBC; font-weight: bold;">where</span> <span style="color: #ECBC9C;">Self</span>: <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">marker</span>::<span style="color: #89C5C8;">Sized</span>`
+    |                                     |
+    |                                     doesn'<span style="color: #ECBC9C;">t</span> have a size known at compile-time
+    |
+    = <span style="color: #ECBC9C;">help</span>: the <span style="color: #FDECBC; font-weight: bold;">trait</span> `<span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">marker</span>::<span style="color: #89C5C8;">Sized</span>` is not implemented <span style="color: #FDECBC; font-weight: bold;">for</span> `<span style="color: #89C5C8;">Self</span>`
+    = <span style="color: #ECBC9C;">note</span>: to learn more, visit <a href="https://doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait">&lt;</a><span style="color: #ECBC9C;"><a href="https://doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait">https</a></span><a href="https://doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait">:</a><span style="color: #6C8C6C;"><a href="https://doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait">//</a></span><span style="color: #8CAC8C;"><a href="https://doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait">doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait&gt;</a></span>
+</pre>
+</div>
+
+<p>
+To better understand this error, what is the type of <code>seq</code> in the following?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">seq</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #DCDCCC;">()</span>
+    .take<span style="color: #DCDCCC;">(</span><span style="color: #CCF8CC;">4</span><span style="color: #DCDCCC;">)</span>
+    .map<span style="color: #DCDCCC;">(</span>|e| e * e<span style="color: #DCDCCC;">)</span>
+    .filter<span style="color: #DCDCCC;">(</span>|<span style="color: #ECBC9C;">e</span>: &amp;<span style="color: #89C5C8;">u32</span>| *e % <span style="color: #CCF8CC;">2</span> == <span style="color: #CCF8CC;">0</span><span style="color: #DCDCCC;">)</span>;
+</pre>
+</div>
+
+<p>
+The answer is <code>Filter&lt;Map&lt;Take&lt;NaturalNumbers&gt;, fn#1&gt;, fn#2&gt;</code>.
+</p>
+
+<p>
+Recall that <code>Map</code>, <code>Filter</code>, and <code>Take</code> all take a type <code>Iter: MyIterator</code> by value,
+so it needs to physically store that iterator in the struct memory layout. The Rust
+language tracks this information in the <code>Sized</code>  trait. So if a type is <code>Sized</code>, Rust
+can properly lay out the struct. If a type is <code>!Sized</code>, then indirection or obscure
+language features are required to embed that type in the struct.
+The compiler has helpfully told us to add a <code>Sized</code> bound on <code>Self</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-diff"><span style="color: #DDCC9C;"> </span><span style="color: #dddddd;">fn</span><span style="color: #DDCC9C;"> </span><span style="color: #dddddd;">take(self,</span><span style="color: #DDCC9C;"> </span><span style="color: #dddddd;">amount:</span><span style="color: #DDCC9C;"> </span><span style="color: #dddddd;">usize)</span><span style="color: #DDCC9C;"> </span><span style="color: #dddddd;">-&gt;</span><span style="color: #DDCC9C;"> </span><span style="color: #dddddd;">Take&lt;Self&gt;</span>
+<span style="color: #CCF8CC;">+</span><span style="color: #CCF8CC;">where</span>
+<span style="color: #CCF8CC;">+</span><span style="color: #DDCC9C;">    </span><span style="color: #CCF8CC;">Self:</span><span style="color: #DDCC9C;"> </span><span style="color: #CCF8CC;">std::marker::Sized,</span>
+<span style="color: #DDCC9C;"> </span><span style="color: #dddddd;">{</span>
+<span style="color: #D9A0A0;">    </span><span style="color: #DDCC9C;"> </span><span style="color: #dddddd;">Take::new(self,</span><span style="color: #DDCC9C;"> </span><span style="color: #dddddd;">amount)</span>
+<span style="color: #DDCC9C;"> </span>}
+</pre>
+</div>
+
+<p>
+This <a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=09e555f21e9f3a4d5110be58931b93d1">compiles and works</a>! Let's run our main again:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">nat</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #CCF8CC;">()</span>.take<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">4</span><span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">doubled</span> = <span style="color: #89C5C8;">Map</span>::new<span style="color: #CCF8CC;">(</span>nat, |e| e * e<span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">seq</span> = <span style="color: #89C5C8;">Filter</span>::new<span style="color: #CCF8CC;">(</span>doubled, |<span style="color: #ECBC9C;">e</span>: &amp;<span style="color: #89C5C8;">u32</span>| *e &gt; <span style="color: #CCF8CC;">0</span><span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">prod</span> = reduce<span style="color: #CCF8CC;">(</span>seq, <span style="color: #CCF8CC;">1</span>, |acc, ele| acc * ele<span style="color: #CCF8CC;">)</span>;
+    <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, prod<span style="color: #CCF8CC;">)</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Which outputs:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-t">~ cargo run
+    Finished dev [unoptimized + debuginfo] target(s) in 0.03s
+     Running `target/debug/iterator-article`
+36
+</pre>
+</div>
+
+<p>
+We can now do the same procedure for <code>Map</code> and <code>Filter</code>. We can reuse
+the constructors but replace <code>Iter</code> with <code>Self</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">trait</span> <span style="color: #89C5C8;">MyIterator</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">elided ...</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">map</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Out</span>, <span style="color: #89C5C8;">F</span><span style="color: #CCF8CC;">&gt;(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">f</span>: <span style="color: #89C5C8;">F</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Map</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>, <span style="color: #89C5C8;">F</span><span style="color: #CCF8CC;">&gt;</span>
+    <span style="color: #FDECBC; font-weight: bold;">where</span>
+        <span style="color: #ECBC9C;">F</span>: <span style="color: #89C5C8;">FnMut</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Out</span>,
+        <span style="color: #ECBC9C;">Self</span>: <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">marker</span>::<span style="color: #89C5C8;">Sized</span>,
+    <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Map</span>::new<span style="color: #DDCC9C;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, f<span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">filter</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">F</span><span style="color: #CCF8CC;">&gt;(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">f</span>: <span style="color: #89C5C8;">F</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Filter</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>, <span style="color: #89C5C8;">F</span><span style="color: #CCF8CC;">&gt;</span>
+    <span style="color: #FDECBC; font-weight: bold;">where</span>
+        <span style="color: #ECBC9C;">F</span>: <span style="color: #89C5C8;">FnMut</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">bool</span>,
+        <span style="color: #ECBC9C;">Self</span>: <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">marker</span>::<span style="color: #89C5C8;">Sized</span>,
+    <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Filter</span>::new<span style="color: #DDCC9C;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, f<span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+
+</pre>
+</div>
+
+<p>
+Our main function is now:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">seq</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #CCF8CC;">()</span>
+        .take<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">4</span><span style="color: #CCF8CC;">)</span>
+        .map<span style="color: #CCF8CC;">(</span>|e| e * e<span style="color: #CCF8CC;">)</span>
+        .filter<span style="color: #CCF8CC;">(</span>|<span style="color: #ECBC9C;">e</span>: &amp;<span style="color: #89C5C8;">u32</span>| *e &gt; <span style="color: #CCF8CC;">0</span><span style="color: #CCF8CC;">)</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">prod</span> = reduce<span style="color: #CCF8CC;">(</span>seq, <span style="color: #CCF8CC;">1</span>, |acc, ele| acc * ele<span style="color: #CCF8CC;">)</span>;
+    <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, prod<span style="color: #CCF8CC;">)</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Which outputs <code>36</code> as before. Now we just need to implement reduce in a similar way as before:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">trait</span> <span style="color: #89C5C8;">MyIterator</span> <span style="color: #DCDCCC;">{</span>
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">elided...</span>
+
+  <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">reduce</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Acc</span>, <span style="color: #89C5C8;">ReduceFn</span><span style="color: #CCF8CC;">&gt;(</span><span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">acc</span>: <span style="color: #89C5C8;">Acc</span>, <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">reducefn</span>: <span style="color: #89C5C8;">ReduceFn</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Acc</span>
+  <span style="color: #FDECBC; font-weight: bold;">where</span>
+      <span style="color: #ECBC9C;">ReduceFn</span>: <span style="color: #89C5C8;">FnMut</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Acc</span>, <span style="color: #89C5C8;">Self</span>::<span style="color: #89C5C8;">Item</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Acc</span>,
+      <span style="color: #ECBC9C;">Self</span>: <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">marker</span>::<span style="color: #89C5C8;">Sized</span>,
+  <span style="color: #CCF8CC;">{</span>
+      <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">acc</span> = acc;
+      <span style="color: #FDECBC; font-weight: bold;">while</span> <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #89C5C8;">Some</span><span style="color: #DDCC9C;">(</span>ele<span style="color: #DDCC9C;">)</span> = <span style="color: #FDECBC; font-weight: bold;">self</span>.next<span style="color: #DDCC9C;">()</span> <span style="color: #DDCC9C;">{</span>
+          acc = reducefn<span style="color: #A0EDF0;">(</span>acc, ele<span style="color: #A0EDF0;">)</span>;
+      <span style="color: #DDCC9C;">}</span>
+      acc
+  <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And change our main function to be:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">prod</span> = <span style="color: #89C5C8;">NaturalNumbers</span>::new<span style="color: #CCF8CC;">()</span>
+        .take<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">4</span><span style="color: #CCF8CC;">)</span>
+        .map<span style="color: #CCF8CC;">(</span>|e| e * e<span style="color: #CCF8CC;">)</span>
+        .filter<span style="color: #CCF8CC;">(</span>|<span style="color: #ECBC9C;">e</span>: &amp;<span style="color: #89C5C8;">u32</span>| *e &gt; <span style="color: #CCF8CC;">0</span><span style="color: #CCF8CC;">)</span>
+        .reduce<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">1</span>, |acc, ele| acc * ele<span style="color: #CCF8CC;">)</span>;
+    <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, prod<span style="color: #CCF8CC;">)</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Which outputs <code>36</code> as expected (<a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=038fda10c9decd7645ab3d85d4e12951">rust playground</a>):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-example">~ cargo run
+   Compiling iterator-article v0.1.0 (/home/david/programming/iterator-article)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.15s
+     Running `target/debug/iterator-article`
+36
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org3b0c2ad" class="outline-3">
+<h3 id="org3b0c2ad">Conclusion</h3>
+<div class="outline-text-3" id="text-org3b0c2ad">
+<p>
+Phew, 3.6k words later we've accomplished our goal. We've recreated the <code>Iterator</code>,
+and delved into it's mechanics.
+I hope you've learned something from his article, as I certainly learned a lot writing it.
+I really like this language feature, and think it represents some of the best API design Rust offers.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org9712279" class="outline-3">
+<h3 id="org9712279">Appendix: The Primes</h3>
+<div class="outline-text-3" id="text-org9712279">
+<p>
+We started our journey by defining the <code>NaturalNumbers</code>, so it would be cool if we could
+generate an infinite sequence of <code>Primes</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">Primes</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ECBC9C;">seen</span>: <span style="color: #89C5C8;">Vec</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">u32</span><span style="color: #CCF8CC;">&gt;</span>,
+    <span style="color: #ECBC9C;">curr</span>: <span style="color: #89C5C8;">u32</span>,
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">Primes</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">new</span><span style="color: #CCF8CC;">()</span> -&gt; <span style="color: #89C5C8;">Self</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Self</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #ECBC9C;">seen</span>: <span style="color: #9CC7FB;">vec!</span><span style="color: #A0EDF0;">[]</span>,
+            <span style="color: #ECBC9C;">curr</span>: <span style="color: #CCF8CC;">2</span>,
+        <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">Iterator</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">Primes</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">Item</span> = <span style="color: #89C5C8;">u32</span>;
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">next</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Option</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">u32</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">ele</span> <span style="color: #FDECBC; font-weight: bold;">in</span> <span style="color: #FDECBC; font-weight: bold;">self</span>.curr.. <span style="color: #DDCC9C;">{</span>
+            <span style="color: #FDECBC; font-weight: bold;">if</span> !<span style="color: #FDECBC; font-weight: bold;">self</span>.seen.iter<span style="color: #A0EDF0;">()</span>.any<span style="color: #A0EDF0;">(</span>|prime| ele % prime == <span style="color: #CCF8CC;">0</span><span style="color: #A0EDF0;">)</span> <span style="color: #A0EDF0;">{</span>
+                <span style="color: #FDECBC; font-weight: bold;">self</span>.seen.push<span style="color: #ACD2AC;">(</span>ele<span style="color: #ACD2AC;">)</span>;
+                <span style="color: #FDECBC; font-weight: bold;">self</span>.curr = ele + <span style="color: #CCF8CC;">1</span>;
+                <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Some</span><span style="color: #ACD2AC;">(</span>ele<span style="color: #ACD2AC;">)</span>;
+            <span style="color: #A0EDF0;">}</span>
+        <span style="color: #DDCC9C;">}</span>
+        <span style="color: #89C5C8;">None</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Which can we use:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"</span><span style="color: #D9A0A0; font-style: italic;">{:?}</span><span style="color: #D9A0A0;">"</span>, <span style="color: #89C5C8;">Primes</span>::new<span style="color: #DDCC9C;">()</span>.take<span style="color: #DDCC9C;">(</span><span style="color: #CCF8CC;">20</span><span style="color: #DDCC9C;">)</span>.collect::&lt;<span style="color: #89C5C8;">Vec</span>&lt;_&gt;&gt;<span style="color: #DDCC9C;">()</span><span style="color: #CCF8CC;">)</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And this outputs the first twenty primes (<a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=4a14a37048c8adc13bbd72822827aa12">rust playground</a>):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust">~ cargo run
+      <span style="color: #89C5C8;">Finished</span> dev <span style="color: #DCDCCC;">[</span>unoptimized + debuginfo<span style="color: #DCDCCC;">]</span> target<span style="color: #DCDCCC;">(</span>s<span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">in</span> <span style="color: #CCF8CC;">0</span>.<span style="color: #CCF8CC;">19s</span>
+       <span style="color: #89C5C8;">Running</span> `target/debug/iterator-article`
+  <span style="color: #DCDCCC;">[</span><span style="color: #CCF8CC;">2</span>, <span style="color: #CCF8CC;">3</span>, <span style="color: #CCF8CC;">5</span>, <span style="color: #CCF8CC;">7</span>, <span style="color: #CCF8CC;">11</span>, <span style="color: #CCF8CC;">13</span>, <span style="color: #CCF8CC;">17</span>, <span style="color: #CCF8CC;">19</span>, <span style="color: #CCF8CC;">23</span>, <span style="color: #CCF8CC;">29</span>, <span style="color: #CCF8CC;">31</span>, <span style="color: #CCF8CC;">37</span>, <span style="color: #CCF8CC;">41</span>, <span style="color: #CCF8CC;">43</span>, <span style="color: #CCF8CC;">47</span>, <span style="color: #CCF8CC;">53</span>, <span style="color: #CCF8CC;">59</span>, <span style="color: #CCF8CC;">61</span>, <span style="color: #CCF8CC;">67</span>, <span style="color: #CCF8CC;">71</span><span style="color: #DCDCCC;">]</span>
+
+</pre>
+</div>
+
+<p>
+It's just that easy to generate a sequence of Primes using <code>Iterator</code> in Rust.
+The reader is encouraged to use <code>MyIterator::reduce</code> to achieve the same effect.
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: David Briggs</p>
+<p class="date">Created: 2020-05-12 Tue 14:54</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
