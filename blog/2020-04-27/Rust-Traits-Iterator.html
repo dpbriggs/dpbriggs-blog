@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2020-05-12 Tue 14:54 -->
+<!-- 2020-05-13 Wed 04:08 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Rust Traits: Iterator</title>
@@ -63,27 +63,27 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orgee7b554">Rust Traits: Iterator</a>
+<li><a href="#orgae7bdc1">Rust Traits: Iterator</a>
 <ul>
-<li><a href="#orgb007c76">The Basics</a></li>
-<li><a href="#orgefbc3bd">The Iterator Trait</a>
+<li><a href="#org99f7f11">The Basics</a></li>
+<li><a href="#org9734557">The Iterator Trait</a>
 <ul>
-<li><a href="#org71f8bfe">The Foundation</a></li>
-<li><a href="#org9e867b0">The Thousand Elided Methods</a></li>
-<li><a href="#org46ae7c7">The collect() Method</a></li>
+<li><a href="#orge35e78d">The Foundation</a></li>
+<li><a href="#org1b646d3">The Thousand Elided Methods</a></li>
+<li><a href="#org2b9a561">The collect() Method</a></li>
 </ul>
 </li>
-<li><a href="#orgdd791f4">Part 1: The Natural Numbers</a>
+<li><a href="#org56d3d80">Part 1: The Natural Numbers</a>
 <ul>
-<li><a href="#org27a8f9a">Implementing Map</a></li>
-<li><a href="#orgbf58474">Filter</a></li>
-<li><a href="#orgbc03213">Reduce</a></li>
-<li><a href="#orgb222ccc">Quick note on reduce</a></li>
+<li><a href="#org0dba65e">Implementing Map</a></li>
+<li><a href="#org8fa884d">Filter</a></li>
+<li><a href="#orge5b0928">Reduce</a></li>
+<li><a href="#orgda39459">Quick note on reduce</a></li>
 </ul>
 </li>
-<li><a href="#org44f7662">Part 2: Our own Iterator Trait</a></li>
-<li><a href="#org3b0c2ad">Conclusion</a></li>
-<li><a href="#org9712279">Appendix: The Primes</a></li>
+<li><a href="#orgd6101ff">Part 2: Our own Iterator Trait</a></li>
+<li><a href="#orge6609cf">Conclusion</a></li>
+<li><a href="#orgd970e96">Appendix: The Primes</a></li>
 </ul>
 </li>
 </ul>
@@ -93,9 +93,9 @@ for the JavaScript code in this tag.
 <span class="timestamp-wrapper"><span class="timestamp">&lt;2020-04-27 Mon&gt;</span></span>
 </p>
 
-<div id="outline-container-orgee7b554" class="outline-2">
-<h2 id="orgee7b554">Rust Traits: Iterator</h2>
-<div class="outline-text-2" id="text-orgee7b554">
+<div id="outline-container-orgae7bdc1" class="outline-2">
+<h2 id="orgae7bdc1">Rust Traits: Iterator</h2>
+<div class="outline-text-2" id="text-orgae7bdc1">
 <p>
 The <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html">Iterator</a> trait in Rust allows you to conveniently operate over a sequence of elements.
 They provide an expressive, functional, convenient, and performant way to do computations.
@@ -107,9 +107,9 @@ If you're not already familiar with traits in Rust, I recommend skimming the <a 
 </p>
 </div>
 
-<div id="outline-container-orgb007c76" class="outline-3">
-<h3 id="orgb007c76">The Basics</h3>
-<div class="outline-text-3" id="text-orgb007c76">
+<div id="outline-container-org99f7f11" class="outline-3">
+<h3 id="org99f7f11">The Basics</h3>
+<div class="outline-text-3" id="text-org99f7f11">
 <p>
 Iterators are very common in Rust, and if you've written Rust you have likely used them.
 Here is a basic example:
@@ -123,7 +123,7 @@ Here is a basic example:
 </div>
 
 <p>
-<code>0..10</code> is a <code>Range</code>, which implements <code>Iterator</code>, which is central to the function of for-loops.
+<code>0..10</code> is a <code>Range</code>, which implements <code>Iterator</code>, which is central to the function of for-loops (<a href="https://doc.rust-lang.org/nightly/std/iter/#for-loops-and-intoiterator">desugar here</a>).
 </p>
 
 <p>
@@ -150,9 +150,9 @@ convenient ways to construct, transform, and consume these sequences.
 </div>
 </div>
 
-<div id="outline-container-orgefbc3bd" class="outline-3">
-<h3 id="orgefbc3bd">The Iterator Trait</h3>
-<div class="outline-text-3" id="text-orgefbc3bd">
+<div id="outline-container-org9734557" class="outline-3">
+<h3 id="org9734557">The Iterator Trait</h3>
+<div class="outline-text-3" id="text-org9734557">
 <p>
 The <code>Iterator</code> trait could be thought as having three parts:
 </p>
@@ -165,9 +165,9 @@ The <code>Iterator</code> trait could be thought as having three parts:
 </div>
 
 
-<div id="outline-container-org71f8bfe" class="outline-4">
-<h4 id="org71f8bfe">The Foundation</h4>
-<div class="outline-text-4" id="text-org71f8bfe">
+<div id="outline-container-orge35e78d" class="outline-4">
+<h4 id="orge35e78d">The Foundation</h4>
+<div class="outline-text-4" id="text-orge35e78d">
 <p>
 The foundation to the <code>Iterator</code> is a type <code>Item</code>, and a method <code>next()</code> which returns <code>Option&lt;Item&gt;</code>:
 </p>
@@ -218,9 +218,9 @@ So now that we've seen the foundation, let's preview some <code>Iterator</code> 
 </div>
 </div>
 
-<div id="outline-container-org9e867b0" class="outline-4">
-<h4 id="org9e867b0">The Thousand Elided Methods</h4>
-<div class="outline-text-4" id="text-org9e867b0">
+<div id="outline-container-org1b646d3" class="outline-4">
+<h4 id="org1b646d3">The Thousand Elided Methods</h4>
+<div class="outline-text-4" id="text-org1b646d3">
 <p>
 While it's nice that we can cleanly define a way to retrieve a single element at a time from a collection,
 it would be very nice to operate on the iterable itself. The <code>Iterator</code> trait provides a LOT of functions
@@ -245,7 +245,7 @@ vs
 <pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">some_iterable</span> = <span style="color: #CCF8CC;">0</span>..<span style="color: #CCF8CC;">100</span>;
 <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">sum</span> = <span style="color: #CCF8CC;">0</span>;
 <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">e</span> <span style="color: #FDECBC; font-weight: bold;">in</span> some_iterable <span style="color: #DCDCCC;">{</span>
-    <span style="color: #FDECBC; font-weight: bold;">if</span> e &gt; <span style="color: #CCF8CC;">50</span> <span style="color: #CCF8CC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">if</span> !<span style="color: #CCF8CC;">(</span>e &gt; <span style="color: #CCF8CC;">50</span><span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
         <span style="color: #FDECBC; font-weight: bold;">continue</span>;
     <span style="color: #CCF8CC;">}</span>
     <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">doubled</span> = e * e;
@@ -270,9 +270,9 @@ You can view a list of the iterator methods <a href="https://doc.rust-lang.org/s
 </div>
 </div>
 
-<div id="outline-container-org46ae7c7" class="outline-4">
-<h4 id="org46ae7c7">The collect() Method</h4>
-<div class="outline-text-4" id="text-org46ae7c7">
+<div id="outline-container-org2b9a561" class="outline-4">
+<h4 id="org2b9a561">The collect() Method</h4>
+<div class="outline-text-4" id="text-org2b9a561">
 <p>
 While important, this article won't focus much on the mechanics of <code>collect()</code>. In short, <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.collect">this method</a> uses the <a href="https://doc.rust-lang.org/std/iter/trait.FromIterator.html">FromIterator</a> trait
 to convert iterators into some collection. You'll find yourself using this often when working with iterators to convert
@@ -290,9 +290,9 @@ Now that we've seen an overview of what's provided, we can implement Iterator!
 </div>
 </div>
 
-<div id="outline-container-orgdd791f4" class="outline-3">
-<h3 id="orgdd791f4">Part 1: The Natural Numbers</h3>
-<div class="outline-text-3" id="text-orgdd791f4">
+<div id="outline-container-org56d3d80" class="outline-3">
+<h3 id="org56d3d80">Part 1: The Natural Numbers</h3>
+<div class="outline-text-3" id="text-org56d3d80">
 <p>
 To get more familiar with the trait, let's make a useful construct: The Natural Numbers.
 </p>
@@ -381,9 +381,9 @@ So now that we can generate a sequence of values, let's implement some familiar 
 </p>
 </div>
 
-<div id="outline-container-org27a8f9a" class="outline-4">
-<h4 id="org27a8f9a">Implementing Map</h4>
-<div class="outline-text-4" id="text-org27a8f9a">
+<div id="outline-container-org0dba65e" class="outline-4">
+<h4 id="org0dba65e">Implementing Map</h4>
+<div class="outline-text-4" id="text-org0dba65e">
 <p>
 A frequent programming task is to loop over some collection and operate (transform) the type of an element given in each iteration.
 </p>
@@ -557,9 +557,9 @@ operate on the element. We can play around with the function types passed but mo
 </div>
 </div>
 
-<div id="outline-container-orgbf58474" class="outline-4">
-<h4 id="orgbf58474">Filter</h4>
-<div class="outline-text-4" id="text-orgbf58474">
+<div id="outline-container-org8fa884d" class="outline-4">
+<h4 id="org8fa884d">Filter</h4>
+<div class="outline-text-4" id="text-org8fa884d">
 <p>
 <code>Filter</code> is an interesting abstraction, as it concerns itself with retaining elements of a sequence which satisfy some criteria, and dropping the rest. The criteria function,
 or <i>predicate</i> function, borrows a value from the iterator and returns true or false. If the predicate evaluates to <code>true</code> on an element, return it to the caller.
@@ -667,9 +667,9 @@ Great! We can now selectively retain elements in a sequence. The final tool to m
 </div>
 </div>
 
-<div id="outline-container-orgbc03213" class="outline-4">
-<h4 id="orgbc03213">Reduce</h4>
-<div class="outline-text-4" id="text-orgbc03213">
+<div id="outline-container-orge5b0928" class="outline-4">
+<h4 id="orge5b0928">Reduce</h4>
+<div class="outline-text-4" id="text-orge5b0928">
 <p>
 The motivation for <code>reduce</code> (<code>fold</code> in Rust) is pretty simple: We need a way to collapse entire sequences into some type. <code>Map</code> and <code>Filter</code> only operate on
 each element one a time, not an entire sequence. How would we sum all numbers in a list?
@@ -790,9 +790,9 @@ Which outputs <code>1 * 1 * 2 * 3 = 6</code> as expected (<a href="https://play.
 </div>
 </div>
 
-<div id="outline-container-orgb222ccc" class="outline-4">
-<h4 id="orgb222ccc">Quick note on reduce</h4>
-<div class="outline-text-4" id="text-orgb222ccc">
+<div id="outline-container-orgda39459" class="outline-4">
+<h4 id="orgda39459">Quick note on reduce</h4>
+<div class="outline-text-4" id="text-orgda39459">
 <p>
 <code>reduce</code> is strictly more powerful than <code>Map</code> and <code>Filter</code> as it has access to the whole
 collection <span class="underline">and</span> an accumulator. We can easily implement <code>Filter</code> in terms of reduce
@@ -823,9 +823,9 @@ example above removes access to the <code>Iterator</code> performance optimizati
 </div>
 </div>
 
-<div id="outline-container-org44f7662" class="outline-3">
-<h3 id="org44f7662">Part 2: Our own Iterator Trait</h3>
-<div class="outline-text-3" id="text-org44f7662">
+<div id="outline-container-orgd6101ff" class="outline-3">
+<h3 id="orgd6101ff">Part 2: Our own Iterator Trait</h3>
+<div class="outline-text-3" id="text-orgd6101ff">
 <p>
 The following code is certainly nice:
 </p>
@@ -1134,9 +1134,9 @@ Which outputs <code>36</code> as expected (<a href="https://play.rust-lang.org/?
 </div>
 </div>
 
-<div id="outline-container-org3b0c2ad" class="outline-3">
-<h3 id="org3b0c2ad">Conclusion</h3>
-<div class="outline-text-3" id="text-org3b0c2ad">
+<div id="outline-container-orge6609cf" class="outline-3">
+<h3 id="orge6609cf">Conclusion</h3>
+<div class="outline-text-3" id="text-orge6609cf">
 <p>
 Phew, 3.6k words later we've accomplished our goal. We've recreated the <code>Iterator</code>,
 and delved into it's mechanics.
@@ -1146,9 +1146,9 @@ I really like this language feature, and think it represents some of the best AP
 </div>
 </div>
 
-<div id="outline-container-org9712279" class="outline-3">
-<h3 id="org9712279">Appendix: The Primes</h3>
-<div class="outline-text-3" id="text-org9712279">
+<div id="outline-container-orgd970e96" class="outline-3">
+<h3 id="orgd970e96">Appendix: The Primes</h3>
+<div class="outline-text-3" id="text-orgd970e96">
 <p>
 We started our journey by defining the <code>NaturalNumbers</code>, so it would be cool if we could
 generate an infinite sequence of <code>Primes</code>:
@@ -1220,7 +1220,7 @@ The reader is encouraged to use <code>MyIterator::reduce</code> to achieve the s
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: David Briggs</p>
-<p class="date">Created: 2020-05-12 Tue 14:54</p>
+<p class="date">Created: 2020-05-13 Wed 04:08</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

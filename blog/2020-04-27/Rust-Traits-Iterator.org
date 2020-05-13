@@ -24,7 +24,7 @@ Here is a basic example:
   }
 #+end_src
 
-=0..10= is a =Range=, which implements =Iterator=, which is central to the function of for-loops.
+=0..10= is a =Range=, which implements =Iterator=, which is central to the function of for-loops ([[https://doc.rust-lang.org/nightly/std/iter/#for-loops-and-intoiterator][desugar here]]).
 
 You may have written something more complex as well:
 
@@ -110,7 +110,7 @@ vs
   let some_iterable = 0..100;
   let mut sum = 0;
   for e in some_iterable {
-      if e > 50 {
+      if !(e > 50) {
           continue;
       }
       let doubled = e * e;
