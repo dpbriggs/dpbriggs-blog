@@ -69,6 +69,7 @@ lazy_static! {
             "github_uri" =>  "/github",
             "resume_uri" =>  "/resume",
             "resume_pdf_uri" =>  "/resume_pdf",
+            "rss_uri" =>  "/rss",
             "crash_uri" =>  "/500",
             "web_sep" =>  "--",
             "admin_email" =>  "david@dpbriggs.ca",
@@ -86,6 +87,7 @@ lazy_static! {
 pub fn get_base_context(nav_href_uri: &str) -> SiteContext<'_> {
     SiteContext {
         base: &STATIC_SITE_CONTEXT_KV,
+        // TODO: Not waste memory like this.
         kv: {
             let mut tmp = SiteContextKv::new();
             tmp.insert("nav_site_href".to_owned(), nav_href_uri.to_owned());
@@ -94,6 +96,11 @@ pub fn get_base_context(nav_href_uri: &str) -> SiteContext<'_> {
         blog: &STATIC_BLOG_ENTRIES,
         curr_blog: None,
     }
+}
+
+pub fn init_context() {
+    let foo = get_base_context("/");
+    println!("{}", foo.blog.blog_files.len());
 }
 
 macro_rules! template_map(

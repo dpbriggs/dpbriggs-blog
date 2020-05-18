@@ -5,6 +5,7 @@ use rocket_contrib::serve::StaticFiles;
 use rocket_contrib::templates::Template;
 
 use crate::context::{get_base_context, get_template};
+use rocket::http;
 use rocket::Catcher;
 use rocket::Route;
 
@@ -29,13 +30,38 @@ simple_route! {github, "/github", "github"}
 
 #[get("/robots.txt")]
 fn robots_txt() -> std::io::Result<&'static str> {
-    // NamedFile::open(get_template("/resume_pdf"))
     let robots_txt = r#"
 # robots.txt
 User-agent: *
 Disallow:
 "#;
     Ok(robots_txt)
+}
+
+#[derive(Responder)]
+struct Rss {
+    inner: Template,
+    header: http::ContentType,
+}
+
+impl Rss {
+    fn new(inner: Template) -> Self {
+        Self {
+            inner,
+            header: http::ContentType::new("application", "rss+xml"),
+        }
+    }
+}
+
+#[get("/feed")]
+fn feed() -> Rss {
+    rss()
+}
+
+#[get("/rss")]
+fn rss() -> Rss {
+    let context = get_base_context("/blog");
+    Rss::new(Template::render("blog-rss", context))
 }
 
 #[get("/resume_pdf")]
@@ -87,7 +113,9 @@ pub fn get_routes() -> (StaticFiles, Vec<Route>, Vec<Catcher>) {
             github,
             resume_pdf,
             robots_txt,
-            blog_article
+            blog_article,
+            rss,
+            feed
         ],
         catchers![server_err, not_found],
     )

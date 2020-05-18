@@ -17,9 +17,11 @@ mod context;
 mod routes;
 mod server;
 
+use context::init_context;
 use server::start_server;
 
 fn main() {
     simple_logger::init_with_level(log::Level::Info).unwrap();
+    init_context();
     start_server().launch();
 }

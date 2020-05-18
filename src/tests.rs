@@ -17,6 +17,8 @@ mod test {
             "/resume",
             "/blog",
             "/resume_pdf",
+            "/rss",
+            "/feed",
             "/static/favicons/apple-touch-icon.png",
             "/static/favicons/favicon-32x32.png",
             "/static/favicons/favicon-16x16.png",
@@ -62,6 +64,7 @@ mod test {
             "nav_site_href",
             "root_uri",
             "blog_uri",
+            "rss_uri",
             "resume_uri",
             "linkedin_uri",
             "github_uri",
@@ -191,9 +194,5 @@ mod test {
             Ok(_) => panic!("Successfully parsed bad file {:?}", missing_toc_loc),
             Err(e) => assert_eq!(e, missing_toc_err),
         }
-
-        // let test_blog_path = PathBuf::from("tests/good-blog-files/2420-04-20/good-blog-file.html");
-        // let res = get_html_contents(&test_blog_path);
     }
-
 }

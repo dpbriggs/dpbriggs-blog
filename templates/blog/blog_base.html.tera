@@ -12,6 +12,10 @@
                     </div>
                     {% block blogsidebar %}
                     {% endblock blogsidebar %}
+                    <div class="pt-3"></div>
+                    <div class="border-top pt-3 mb-3">
+                        RSS Feed: <a href="{{ base.rss_uri }}"> Click here </a>
+                    </div>
                 </ul>
             </div>
         </nav>

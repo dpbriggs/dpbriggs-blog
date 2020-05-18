@@ -3,7 +3,7 @@ use select;
 
 use chrono::NaiveDate;
 use select::document::Document;
-use select::predicate::{Attr, Class};
+use select::predicate::{Attr, Class, Name};
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
@@ -31,7 +31,9 @@ pub struct OrgBlog {
 pub struct OrgModeHtml {
     pub title: String,
     pub date: NaiveDate,
+    pub pub_date: String,
     pub toc: String,
+    pub desc: String,
     pub html: String,
     pub slug: String,
     pub footnotes: Vec<String>,
@@ -68,6 +70,7 @@ pub enum ParsingError {
     CannotFindToc(PathBuf),
     CannotParseDate(PathBuf),
     CannotFindTitle(PathBuf),
+    CannotFindFirstParagraph(PathBuf),
     CannotFindDate(PathBuf),
     CannotFindContents(PathBuf),
     CannotParseHtml(PathBuf),
@@ -103,14 +106,26 @@ pub fn get_html_contents(blog_file: &PathBuf) -> Result<OrgModeHtml, ParsingErro
         }
     };
 
+    let pub_date: String = date.format("%a, %d %b %Y 1:01:00 EST").to_string();
+
     let toc = match document.find(Attr("id", "text-table-of-contents")).next() {
         Some(toc) => toc.html(),
         None => return Err(ParsingError::CannotFindToc(blog_file.to_path_buf())),
     };
 
     let html = match document.find(Class("outline-2")).next() {
-        Some(org_body) => org_body.html(),
+        Some(org_body) => org_body,
         None => return Err(ParsingError::CannotFindContents(blog_file.to_path_buf())),
+    };
+
+    // The first paragraph is likely a good enough description.
+    let desc = match html.find(Name("p")).next() {
+        Some(first_para) => first_para.text(),
+        None => {
+            return Err(ParsingError::CannotFindFirstParagraph(
+                blog_file.to_path_buf(),
+            ))
+        }
     };
 
     let slug_string = blog_file.clone().into_os_string().into_string().unwrap();
@@ -127,8 +142,10 @@ pub fn get_html_contents(blog_file: &PathBuf) -> Result<OrgModeHtml, ParsingErro
     Ok(OrgModeHtml {
         title,
         date,
+        pub_date,
         toc,
-        html,
+        desc,
+        html: html.html(),
         slug,
         footnotes,
     })

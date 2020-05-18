@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+    <channel>
+        <title>dpbriggs.ca blog</title>
+        <link>https://dpbriggs.ca/blog</link>
+        <description>Tech articles || rust</description>
+        {% for article in blog.blog_files %}
+        <item>
+            <title>{{ article.title }}</title>
+            <link>https://{{ base.domain_name }}{{base.blog_uri}}/{{ article.slug }}</link>
+            <description>{{ article.desc }} </description>
+            <date> {{ article.date }} </date>
+            <pubDate> {{ article.pub_date }} </pubDate>
+        </item>
+        {% endfor %}
+    </channel>
+</rss>
