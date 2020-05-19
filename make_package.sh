@@ -1,4 +1,7 @@
 #!/bin/bash
+
+rm *.zip
+
 BIN_NAME="dpbriggs-blog"
 BIN_FOLDER="target/release/"
 cargo build --release
@@ -17,4 +20,5 @@ zip -r  $ZIP_FILE_NAME .
 cd -
 mv $TMP_FOLDER/$ZIP_FILE_NAME .
 echo "Created project archive $ZIP_FILE_NAME in current directory."
-echo "Simply copy to server, unzip, and use start_caddy.sh and run_site.sh"
+echo "Simply copy to server, unzip, and use:"
+echo "systemctl --user restart run_site run_caddy"
