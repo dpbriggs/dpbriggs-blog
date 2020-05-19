@@ -5,24 +5,24 @@
 <span> {{ base.full_name }} {{ base.web_sep }} {{ base.my_email }} </span>
 <br>
 <br>
-Hi, I'm a software developer and computer science student at the University of Waterloo.
-I enjoy building out complex applications.
+Hi, I'm a software developer and computer science graduate from the University of Waterloo.
+I enjoy building out complex and secure applications.
 <br>
 <br>
-I have worked in <b>Ad Tech</b>, <b>Healthcare</b>, and
+I have worked in <b>Security Orchestration & Automation</b>, <b>Ad Tech</b>, <b>Healthcare</b>, and
 <b>Enterprise Container R&D</b>.
 I've also designed <b>Big Data</b> solutions involving event-driven generic container frameworks.
 <br>
 <br>
-My go-to languages include <b>Python</b>, <b>Rust</b>, <b>Bash</b>, and <b>Scala</b>.
-My go-to tech includes <b>Docker</b>, <b>Kubernetes</b>, <b>Django</b>, and <b>React</b>.
+During my school terms I dabbled in <b>Contracting</b> as well, where I learned how to mentor new team members
+and operate under very tight schedules.
+<br>
+<br>
+My go-to languages include <b>Python</b>, <b>Rust</b>, <b>Bash</b>, <b>C++</b>, and <b>Scala</b>.
+My go-to tech includes <b>Django</b>, <b>Kubernetes</b>, <b>Docker</b>, and <b>React</b>.
 Check out my
 <a href="/resume">Resume<span class="sr-only">(Resume)</span></a>
-for more details.
-<br>
-<br>
-I have generally contracted during my school terms, in which I've supervised new team members
-and learned to deal with tight time budgets.
+or <a href="/github">Github<span class="sr-only">(Github)</span></a> for more details.
 <br>
 <br>
 If you're interested, I blog about random tech related things.

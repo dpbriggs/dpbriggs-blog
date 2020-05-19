@@ -10,7 +10,6 @@
                     <br>
                     <br>
                     I use LinkedIn to manage my professional connections and connect with new people.
-                    I generally update it once a term (every four months) as I switch from co-op to school.
                     <br>
                     <br>
                     <a href="{{ base.linkedin_url }}" target="_blank"> View my LinkedIn Page<span class="sr-only">(current)</span></a>

@@ -9,8 +9,8 @@
                     <h3>dpbriggs | <a href="{{ base.resume_pdf_uri }}" target="_blank">Resume<span class="sr-only">(current)</span></a></h3>
                     <br>
                     <br>
-                    My resume generally tracks the last few years. My resume is an over engineered latex template, so if your copy
-                    looks different, you've recieved a custom one.
+                    My resume generally tracks the last few years. I make an effort to add as much detail as possible,
+                    and if you would like me to elaborate on any points, please shoot me an email at <a href="mailto:david@dpbriggs.ca">david@dpbriggs.ca</a>
                     <br>
                     <br>
                     <a href="{{ base.resume_pdf_uri }}" target="_blank"> Download Resume <span class="sr-only">(current)</span></a>

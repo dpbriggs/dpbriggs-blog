@@ -8,7 +8,11 @@
                 <div class="align-self-center bordered mx-auto index-card">
                     <h3> dpbriggs | <a href="{{ base.github_url }}" target="_blank"> Github<span class="sr-only">(current)</span></a></h3>
                     <br>
-                    I generally store my projects on Github. It tends to be pretty bare as my time is usually divided between work, school, and contracts.
+                    These are projects I work on for fun.
+                    I have recently taken an interest in <b>Databases</b> and related <b>Data-Structures</b>.
+                    I usually code in <b>Rust</b> and <b>Python</b>.
+                    <br>
+                    <br>
                     Below is a list of some of my projects:
                     <br>
                     <br>
