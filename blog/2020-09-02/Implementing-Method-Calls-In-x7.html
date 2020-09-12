@@ -1,0 +1,1059 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2020-09-12 Sat 18:45 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Implementing Records in x7</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="David Briggs" />
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Implementing Records in x7</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org1a49bd3">Implementing Records in x7</a>
+<ul>
+<li><a href="#org1661d22">x7 Interpreter Internals</a></li>
+<li><a href="#orgc104496">Parsing "(+ 1 1)"</a></li>
+<li><a href="#orgea01f8a">Evaluating (+ 1 1)</a>
+<ul>
+<li><a href="#orga8895b4">Evaluating Expressions</a></li>
+<li><a href="#org2c7ca01">Evaluating Symbols</a></li>
+<li><a href="#orga8631d9">Evaluating Lists</a></li>
+</ul>
+</li>
+<li><a href="#org6217256">The Record Trait</a>
+<ul>
+<li><a href="#org125a72c">Wiring RecordType into x7</a></li>
+<li><a href="#orgd6d36e7">Adding call_method to the standard library</a></li>
+<li><a href="#org2fd690a">Implementing the File Record</a></li>
+</ul>
+</li>
+<li><a href="#org2499492">Adding Method call syntax in x7</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+<span class="timestamp-wrapper"><span class="timestamp">&lt;2020-05-22 Fri&gt;</span></span>
+</p>
+
+
+<div id="outline-container-org1a49bd3" class="outline-2">
+<h2 id="org1a49bd3">Implementing Records in x7</h2>
+<div class="outline-text-2" id="text-org1a49bd3">
+<p>
+<a href="https://github.com/dpbriggs/x7">x7</a> is a lisp I made to explore language design and interpreters. Here's the hello world for it:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #DCDCCC;">(</span>println <span style="color: #D9A0A0;">"Hello World!"</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+It's got all the functional niceness that lisps provide:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">Define a function which squares the input</span>
+<span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">defn</span> <span style="color: #A0EDF0;">square</span> <span style="color: #CCF8CC;">(</span>x<span style="color: #CCF8CC;">)</span>
+  <span style="color: #CCF8CC;">(</span>* x x<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">predicate for x mod 4 == 1</span>
+<span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">defn</span> <span style="color: #A0EDF0;">is-one-mod-4</span> <span style="color: #CCF8CC;">(</span>x<span style="color: #CCF8CC;">)</span>
+  <span style="color: #CCF8CC;">(</span>= <span style="color: #CCF8CC;">1</span> <span style="color: #DDCC9C;">(</span><span style="color: #ECBC9C;">%</span> x <span style="color: #CCF8CC;">4</span><span style="color: #DDCC9C;">)</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">Filter and map the first two hundred numbers</span>
+<span style="color: #DCDCCC;">(</span>filter is-one-mod-4
+        <span style="color: #CCF8CC;">(</span>map square <span style="color: #DDCC9C;">(</span>range <span style="color: #CCF8CC;">200</span><span style="color: #DDCC9C;">)</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">Outputs: (1 9 25 49 81 121 169 225 ...)</span>
+</pre>
+</div>
+
+<p>
+<code>x7</code> has all the nice immutable, stateless fun that functional languages provide.
+What it can't do is represent types which are internally stateful, like files or sockets.
+This article will explain how we can add state to the language in the form of <code>Records</code>.
+</p>
+
+<p>
+The motivation for this that the OS expects you maintain some state if you want to operate on files (or really any IO). There's tricks to avoid internally mutable state, but it's way more fun to add it to the language.
+</p>
+
+<p>
+<code>Records</code>, or objects, allow us to encapsulate state in one place, that you can call methods on.
+We'll work towards opening, writing, and reading from a file in <code>x7</code>. This is what it looks like:
+</p>
+
+
+<div class="org-src-container">
+<pre class="src src-clojure"><span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">Open a file</span>
+<span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">def</span> <span style="color: #ECBC9C;">my-file</span> <span style="color: #CCF8CC;">(</span>fs<span style="color: #CCF8CC;">::open</span> <span style="color: #D9A0A0;">"my_file.txt"</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">.write is a method of the record File,</span>
+<span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">which will write strings to the file</span>
+<span style="color: #DCDCCC;">(</span>.write my-file <span style="color: #D9A0A0;">"Hello World"</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">Similarly, we can use the .read_to_string</span>
+<span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">method to read the file contents</span>
+<span style="color: #DCDCCC;">(</span>.read_to_string my-file<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Before we can implement Records, we'll need a better idea of <code>x7</code>'s interpreter internals.
+</p>
+</div>
+
+<div id="outline-container-org1661d22" class="outline-3">
+<h3 id="org1661d22">x7 Interpreter Internals</h3>
+<div class="outline-text-3" id="text-org1661d22">
+<p>
+To run <code>x7</code> programs, we need to parse the incoming strings into a form we can actually evaluate. Central to this is the type <code>Expr</code>, which represents all possible types in the interpreter:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">enum</span> <span style="color: #89C5C8;">Expr</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Symbol</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Symbol</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">List</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Function</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Function</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">elided variants...</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+The shown members of that enum are the minimum required variants to evaluate simple expressions like <code>(+ 1 1)</code>. If you're not familiar with lisps, this is the same thing as <code>1 + 1</code>.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgc104496" class="outline-3">
+<h3 id="orgc104496">Parsing "(+ 1 1)"</h3>
+<div class="outline-text-3" id="text-orgc104496">
+<p>
+The string <code>"(+ 1 1)"</code> needs to get transformed into a type we can operate on.
+The details of the <a href="https://github.com/dpbriggs/x7/blob/serialization/src/parser.rs#L1">parser</a> aren't relevant this article. All we really need to know is that <code>(+ 1 1)</code> gets transformed into the following <code>Expr</code> type:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">List</span><span style="color: #DCDCCC;">(</span>
+    <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Symbol</span><span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"+"</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">1</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">1</span><span style="color: #CCF8CC;">)</span>,
+<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+This form is very convenient as we can recursively evaluate it to facilitate computation.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgea01f8a" class="outline-3">
+<h3 id="orgea01f8a">Evaluating (+ 1 1)</h3>
+<div class="outline-text-3" id="text-orgea01f8a">
+<p>
+Crucial to lisps is the <code>expression</code>, or the idea that types just exist and propagate through computation. Evaluation simply stated is a computation process of taking an expression, and returning another expression. For example, typing <code>3.3</code> in the <code>x7</code> interpreter returns <code>3.3</code>, another expression. In contrast, <code>(+ 1 1)</code> is considerably more complex, as it represents a function call to add two numbers. We'll need to work our way there.
+</p>
+
+<p>
+To build our way to evaluating <code>(+ 1 1)</code>, we'll need to discuss core concepts like <code>Expressions</code>, <code>Symbols</code>, and <code>Lists</code>.
+</p>
+</div>
+
+<div id="outline-container-orga8895b4" class="outline-4">
+<h4 id="orga8895b4">Evaluating Expressions</h4>
+<div class="outline-text-4" id="text-orga8895b4">
+<p>
+As mentioned earlier, evaluation is fundamental to the function of <code>x7</code>. More importantly, different types evaluate differently!
+</p>
+
+<p>
+Here's a quick preview of what different types evaluate to:
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="border" width="70%">
+<caption class="t-above"><span class="table-number">Table 1:</span> Eval Behaviour for diffent types</caption>
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Type</th>
+<th scope="col" class="org-left">Eval Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">Num</td>
+<td class="org-left">Itself - another num.</td>
+</tr>
+
+<tr>
+<td class="org-left">Function</td>
+<td class="org-left">Itself - the same function.</td>
+</tr>
+
+<tr>
+<td class="org-left">Symbol</td>
+<td class="org-left">A lookup to find whatever the symbol represents (function, etc).</td>
+</tr>
+
+<tr>
+<td class="org-left">Lists</td>
+<td class="org-left">A function call, where the first member is interpreted as a function.</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+If we start the <code>x7</code> interpreter, we can see this in action:
+</p>
+
+<pre class="example">
+&gt;&gt;&gt; 3.3                ;; Num
+3.3
+&gt;&gt;&gt; (fn (x) (x))       ;; Function
+Fn&lt;AnonFn, 1, [ x ]&gt;
+&gt;&gt;&gt; +                  ;; Symbol
+Fn&lt;+, 1, [ ]&gt;
+&gt;&gt;&gt; (+ 1 1)            ;; List
+2
+</pre>
+
+<p>
+With this behaviour in mind, we'll need to better understand how Symbols work in the interpreter.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org2c7ca01" class="outline-4">
+<h4 id="org2c7ca01">Evaluating Symbols</h4>
+<div class="outline-text-4" id="text-org2c7ca01">
+<p>
+Symbols act as references to something else in the interpreter - things like constants or functions. <code>x7</code> uses the <code>SymbolTable</code> type, which provides a <code>lookup(&amp;self, key: &amp;Expr)</code> method to map symbols to expressions in the interpreter.
+</p>
+
+<p>
+The implementation of <code>eval</code> for <code>Symbol</code> looks like:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">self is an Expr</span>
+<span style="color: #FDECBC; font-weight: bold;">if</span> <span style="color: #FDECBC; font-weight: bold;">self</span>.is_symbol<span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">return</span> symbol_table.lookup<span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Part of the <code>x7</code> initialization process is to populate the symbol table with the standard library - either from <code>rust</code> with the <code>make_stdlib_fns!</code> macro or
+the <code>x7</code> files in <code>stdlib/</code>. If we disable symbol population you'll see that <code>x7</code> runs just fine, but isn't very useful:
+</p>
+
+<pre class="example">
+;; x7 without a stdlib isn't very useful
+&gt;&gt;&gt; +
+Error: Unknown Symbol +
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orga8631d9" class="outline-4">
+<h4 id="orga8631d9">Evaluating Lists</h4>
+<div class="outline-text-4" id="text-orga8631d9">
+<p>
+The next area is to understand is the interaction between <code>Lists</code> and <code>Symbols</code>. A list evaluation in <code>x7</code> (and lisps) is a <span class="underline">function call</span>,
+with the following convention:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #DCDCCC;">(</span>&lt;fn-expr&gt; &lt;arg1&gt; &lt;arg2&gt; ...<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+The goal then is for the <code>x7</code> interpreter to evaluate <code>&lt;fn-expr&gt;</code> to a function, and then call the function with the args.
+The vast majority of time <code>&lt;fn-expr&gt;</code> will be a symbol, like <code>+</code> or <code>-</code>, so it'll be a symbol lookup.
+The process we want then:
+</p>
+
+<ol class="org-ol">
+<li>Evaluate <code>&lt;fn-expr&gt;</code>, and hope it returns a <code>Function</code></li>
+<li>Call the <code>Function</code> with the args provided.</li>
+</ol>
+
+<p>
+In <code>rust</code> this looks like:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">if</span> <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #89C5C8;">Ok</span><span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">mut</span> list<span style="color: #DCDCCC;">)</span> = <span style="color: #FDECBC; font-weight: bold;">self</span>.get_list<span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Empty lists are _not_ function calls</span>
+    <span style="color: #FDECBC; font-weight: bold;">if</span> list.is_empty<span style="color: #CCF8CC;">()</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>.clone<span style="color: #A0EDF0;">()</span><span style="color: #DDCC9C;">)</span>;
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">head</span> = list.pop_front<span style="color: #CCF8CC;">()</span>.unwrap<span style="color: #CCF8CC;">()</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">tail</span> = list;
+
+    <span style="color: #FDECBC; font-weight: bold;">return</span> head.eval<span style="color: #CCF8CC;">(</span>&amp;symbol_table<span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span>.call_fn<span style="color: #CCF8CC;">(</span>tail, symbol_table<span style="color: #CCF8CC;">)</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+The last line is the operative one - we evaluate the first item (<code>head</code>),
+and the use the <code>call_fn</code> method to call the function.
+</p>
+
+<p>
+If you're not super familiar with rust, the last line can be understood as:
+</p>
+
+<ol class="org-ol">
+<li>Evaluate <code>head</code>, and early return if we get an error.
+<ol class="org-ol">
+<li>The most common error is simply the symbol not resolving. More exotic errors could be something like <code>head</code> is itself a function call that failed.</li>
+<li>To elaborate further, <code>head</code> can evaluate to <span class="underline">anything</span>. While this case is intended to map symbols to functions, anything can happen here. If we didn't evaluate <code>head</code>, <code>Symbol("+")</code> would never become the function <code>Fn&lt;+, 1, [ ]&gt;</code>.
+<ol class="org-ol">
+<li>For the curious, <code>((if (random_bool) + -) 10 5)</code> is a valid <code>x7</code> program. It randomly returns 5 or 15.</li>
+</ol></li>
+</ol></li>
+<li>Call the method <code>call_fn</code>.
+<ol class="org-ol">
+<li>If <code>head</code> doesn't evaluate to a function, return the error <code>NotAFunction</code></li>
+<li>If it's a function, call it with args <code>tail</code></li>
+</ol></li>
+</ol>
+
+<p>
+Notably, we don't evaluate <code>tail</code>. To allow conditional constructs like <code>if</code> or <code>cond</code> to not evaluate branches not taken, we need a way to opt out of evaluation! This is implemented as a flag on the <code>Function</code> struct which can be controlled by the <code>rust</code> portion of the standard library.
+</p>
+
+<p>
+Now that we have an overview of the <code>x7</code> interpreter internals, we can actually add records to the language!
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org6217256" class="outline-3">
+<h3 id="org6217256">The Record Trait</h3>
+<div class="outline-text-3" id="text-org6217256">
+<p>
+To represent types which are internally stateful, we'll add a trait called <code>Record</code> to the language. It needs to express following behaviours:
+</p>
+
+<ol class="org-ol">
+<li>Call methods with arguments.</li>
+<li>Represent the type in a display and debug way.</li>
+<li>Represent the type name as a string, and it's methods.</li>
+<li>Uniquely identify the type (hash).</li>
+<li>Clone the type safely.</li>
+</ol>
+
+<p>
+Aside from calling methods, most of these items are related to making sure
+error messages are nice, or slotting it in cleanly with the rest of the interpreter machinery.
+</p>
+
+<p>
+Here's the trait in <code>rust</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ACD2AC;">/// Fundamental trait for records.</span>
+<span style="color: #ACD2AC;">///</span>
+<span style="color: #ACD2AC;">/// Records allow x7 to represent a variety of internally mutable types</span>
+<span style="color: #ACD2AC;">/// while not expanding the Expr enum too much. These types are responsible for</span>
+<span style="color: #ACD2AC;">/// implementing RecordDoc if they want to have documentation.</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">trait</span> <span style="color: #ECBC9C;">Record</span>: <span style="color: #89C5C8;">Sync</span> + <span style="color: #89C5C8;">Send</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ACD2AC;">/// Call a method on this record.</span>
+    <span style="color: #ACD2AC;">/// (.method_name &lt;rec&gt; arg1 arg2 arg3)</span>
+    <span style="color: #ACD2AC;">/// Becomes:</span>
+    <span style="color: #ACD2AC;">/// (&amp;self: &lt;rec&gt;, sym: "method_name", args: vector![arg1, arg2, arg3])</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">call_method</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">sym</span>: &amp;<span style="color: #89C5C8;">str</span>, <span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span>;
+
+    <span style="color: #ACD2AC;">/// Uniquely identify this record</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">id</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">u64</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #CCF8CC;">0</span>
+    <span style="color: #CCF8CC;">}</span>
+    <span style="color: #ACD2AC;">/// Nicely display the record type.</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">display</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">String</span>;
+
+    <span style="color: #ACD2AC;">/// Add more information for debug printing</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">debug</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">String</span>;
+
+    <span style="color: #ACD2AC;">/// Clone the object.</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">clone</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">RecordType</span>;
+
+    <span style="color: #ACD2AC;">/// Return the names of the methods for help messages.</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">methods</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Vec</span><span style="color: #CCF8CC;">&lt;</span>&amp;'<span style="color: #FDECBC; font-weight: bold;">static</span> <span style="color: #89C5C8;">str</span><span style="color: #CCF8CC;">&gt;</span>;
+
+    <span style="color: #ACD2AC;">/// Return the type name for nice help messages</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">type_name</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; &amp;'<span style="color: #FDECBC; font-weight: bold;">static</span> <span style="color: #89C5C8;">str</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Now that we have a trait, we need a fundamental type we can export and use throughout
+<code>x7</code>. Since we want to use trait objects, a <code>Box</code> is a natural choice:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">RecordType</span> = <span style="color: #89C5C8;">Box</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #89C5C8;">Record</span><span style="color: #DCDCCC;">&gt;</span>;
+</pre>
+</div>
+
+<p>
+I'll elide the implementation details to get <code>Record</code> implemented for <code>RecordType</code>,
+but if you're curious, they can be found <a href="https://github.com/dpbriggs/x7/blob/master/src/records/record.rs#L48">here</a>.
+</p>
+</div>
+
+
+<div id="outline-container-org125a72c" class="outline-4">
+<h4 id="org125a72c">Wiring RecordType into x7</h4>
+<div class="outline-text-4" id="text-org125a72c">
+<p>
+To integrate <code>RecordType</code> into the language, we'll need to add it to aforementioned
+<code>Expr</code> enum. Here's what it looked like before we add <code>Record</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">derive</span><span style="color: #CCF8CC;">(</span><span style="color: #9CC7FB;">Clone, Hash</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">enum</span> <span style="color: #89C5C8;">Expr</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Symbol</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Symbol</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">truncated...</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And after:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">derive</span><span style="color: #CCF8CC;">(</span><span style="color: #9CC7FB;">Clone, Hash</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">enum</span> <span style="color: #89C5C8;">Expr</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Symbol</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Symbol</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Record</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">records</span>::<span style="color: #89C5C8;">RecordType</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">truncated...</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+It's just that easy. We can use compiler errors to figure out what we're missing.
+</p>
+
+<p>
+The compiler errors tells us that we're missing <code>Hash</code>, <code>PartialEq</code>, and <code>Clone</code> on <code>RecordType</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #ACD2AC;">/// We can stick whatever we want into hashmaps, so we need Hash implemented</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">Hash</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">RecordType</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">hash</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #ECBC9C;">H</span>: <span style="color: #89C5C8;">Hasher</span><span style="color: #CCF8CC;">&gt;(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">state</span>: &amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #89C5C8;">H</span><span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">self</span>.id<span style="color: #DDCC9C;">()</span>.hash<span style="color: #DDCC9C;">(</span>state<span style="color: #DDCC9C;">)</span>;
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #ACD2AC;">/// We also need to equality check RecordTypes</span>
+<span style="color: #ACD2AC;">/// As their internal state may differ, always return false.</span>
+<span style="color: #ACD2AC;">/// This could be improved.</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">PartialEq</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">RecordType</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">eq</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">_other</span>: &amp;<span style="color: #89C5C8;">RecordType</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">bool</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">false</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #ACD2AC;">/// x7 clones types all over the place</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">Clone</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">RecordType</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">clone</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">RecordType</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Record</span>::clone<span style="color: #DDCC9C;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Great! We now have the requisite traits implemented for <code>RecordType</code>, and
+aside from a few changes like my custom <code>Display</code> implementation, we're good to go.
+</p>
+
+<p>
+The last thing we'll want is a way to grab a <code>RecordType</code> out of the enum when we want it:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">Expr</span> <span style="color: #DCDCCC;">{</span>
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">... elided...</span>
+  <span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #CCF8CC;">)</span> <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">get_record</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">RecordType</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+      <span style="color: #FDECBC; font-weight: bold;">if</span> <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Record</span><span style="color: #DDCC9C;">(</span>r<span style="color: #DDCC9C;">)</span> = <span style="color: #FDECBC; font-weight: bold;">self</span> <span style="color: #DDCC9C;">{</span>
+          <span style="color: #89C5C8;">Ok</span><span style="color: #A0EDF0;">(</span>r.clone<span style="color: #ACD2AC;">()</span><span style="color: #A0EDF0;">)</span>
+      <span style="color: #DDCC9C;">}</span> <span style="color: #FDECBC; font-weight: bold;">else</span> <span style="color: #DDCC9C;">{</span>
+          <span style="color: #9CC7FB;">bad_types!</span><span style="color: #A0EDF0;">(</span><span style="color: #D9A0A0;">"record"</span>, &amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #A0EDF0;">)</span>
+      <span style="color: #DDCC9C;">}</span>
+  <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+This will let us grab a record type in our standard library and have nice error messages
+if we don't.
+</p>
+
+<p>
+The next thing we'll want to do is add a standard library function to call methods!
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgd6d36e7" class="outline-4">
+<h4 id="orgd6d36e7">Adding call_method to the standard library</h4>
+<div class="outline-text-4" id="text-orgd6d36e7">
+<p>
+Now that <code>RecordType</code> is embedded in the interpreter's machinery, we can actually use it!
+We will want a way to explicitly call methods in the standard library, <code>stdlib::call_method</code>.
+</p>
+
+<p>
+We won't have the <code>.method-call</code> syntactic sugar yet, so a free standing <code>x7</code> function
+will have to do.
+</p>
+
+<p>
+Recall the signature of <code>Record::call_method</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">call_method</span><span style="color: #DCDCCC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">sym</span>: &amp;<span style="color: #89C5C8;">str</span>, <span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DCDCCC;">&gt;</span>;
+</pre>
+</div>
+
+<p>
+We'll want a standard library method that takes:
+</p>
+
+<ol class="org-ol">
+<li>A record</li>
+<li>A method on that record</li>
+<li>Some args for that method.</li>
+</ol>
+
+<p>
+Thankfully this is pretty straightforward. All functions in <code>x7</code> must have the following type:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">type</span> <span style="color: #89C5C8;">X7FunctionPtr</span> =
+    <span style="color: #89C5C8;">Arc</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #89C5C8;">Fn</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span>, &amp;<span style="color: #89C5C8;">SymbolTable</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span> + <span style="color: #89C5C8;">Sync</span> + <span style="color: #89C5C8;">Send</span><span style="color: #DCDCCC;">&gt;</span>;
+</pre>
+</div>
+
+<p>
+In <code>rust</code>, this looks like:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">call_method</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">exprs</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span>, <span style="color: #ECBC9C;">_symbol_table</span>: &amp;<span style="color: #89C5C8;">SymbolTable</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+   <span style="color: #6C8C6C;">// </span><span style="color: #cc9393;">TODO</span><span style="color: #8CAC8C;">: Implement the function</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+The next issue to tackle is the argument layout for <code>stdlib::call_method</code>.
+</p>
+
+<p>
+We're only given a list of arguments, so we'll need to define a calling convention:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #DCDCCC;">(</span>call_method &lt;record&gt; &lt;method-name&gt; &lt;args&gt;...<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+So we'll expect a record as the first member, and then the method name, and finally the args.
+For example, here's how we'd expect writing to a file to look like:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #DCDCCC;">(</span>call_method my-file <span style="color: #D9A0A0;">"write"</span> <span style="color: #D9A0A0;">"hello world"</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Thanks to the <code>Expr::get_record</code> function we made earlier, we can easily implement <code>stdlib::call_method</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">call_method</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">exprs</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span>, <span style="color: #ECBC9C;">_symbol_table</span>: &amp;<span style="color: #89C5C8;">SymbolTable</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">First list member is a record.</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">rec</span> = exprs<span style="color: #CCF8CC;">[</span><span style="color: #CCF8CC;">0</span><span style="color: #CCF8CC;">]</span>.get_record<span style="color: #CCF8CC;">()</span><span style="color: #DCDCCC; font-weight: bold;">?</span>;
+
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Second list member is the method string.</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">method</span> = &amp;exprs<span style="color: #CCF8CC;">[</span><span style="color: #CCF8CC;">1</span><span style="color: #CCF8CC;">]</span>.get_string<span style="color: #CCF8CC;">()</span><span style="color: #DCDCCC; font-weight: bold;">?</span>;
+
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Collect the args in the list.</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">args</span> = exprs.clone<span style="color: #CCF8CC;">()</span>.slice<span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">2</span>..<span style="color: #CCF8CC;">)</span>; <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">.clone() is O(1) and .slice needs a &amp;mut</span>
+
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Finally, call the method on the record with args</span>
+    <span style="color: #FDECBC; font-weight: bold;">use</span> <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">records</span>::<span style="color: #89C5C8;">Record</span>;
+    rec.call_method<span style="color: #CCF8CC;">(</span>method, args<span style="color: #CCF8CC;">)</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Now that we have the function, we'll need to make it accessible from the interpreter.
+<code>x7</code> uses a macro called <code>make_stdlib_fns</code> to expose rust functions to the interpreter, so we need to just slot it in:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #9CC7FB;">make_stdlib_fns!</span><span style="color: #DCDCCC;">{</span>
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">elided functions...</span>
+  <span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"call_method"</span>, <span style="color: #CCF8CC;">2</span>, call_method, <span style="color: #FDECBC; font-weight: bold;">true</span>, <span style="color: #D9A0A0;">"&lt;doc-string&gt;"</span><span style="color: #CCF8CC;">)</span>,
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+This can be read as:
+</p>
+
+<ol class="org-ol">
+<li>Expose <code>stdlib::call_method</code> to the interpreter with the symbol <code>call_method</code>, and</li>
+<li>It expects at least two arguments, and</li>
+<li>Ask the interpreter to evaluate the arguments (<code>true</code>), and finally</li>
+<li>Have the docstring <code>"&lt;doc-string&gt;"</code>.</li>
+</ol>
+
+<p>
+We can start the interpreter and ask it to evaluate the symbol <code>call_method</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp">&gt;&gt;&gt; call_method
+Fn&lt;call_method, <span style="color: #CCF8CC;">2</span>, [ ]&gt;
+</pre>
+</div>
+
+<p>
+Nice! We can't really do much with it as we haven't actually implemented <code>Record</code> on any types yet, so let's do that!
+</p>
+</div>
+</div>
+
+<div id="outline-container-org2fd690a" class="outline-4">
+<h4 id="org2fd690a">Implementing the File Record</h4>
+<div class="outline-text-4" id="text-org2fd690a">
+<p>
+The original motivation for adding <code>Record</code> to <code>x7</code> is the ability to open, read, and write to files.
+We'll back the <code>x7</code> File implementation by the <code>rust</code> File struct, so let's make a new file in <code>x7</code> - <code>records/file.rs</code>:
+</p>
+
+<p>
+We will start by making a <code>FileRecord</code> struct:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">derive</span><span style="color: #CCF8CC;">(</span><span style="color: #9CC7FB;">Clone, Debug</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #DCDCCC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #DCDCCC;">)</span> <span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">FileRecord</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ECBC9C;">path</span>: <span style="color: #89C5C8;">String</span>,
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">The Record trait requires Sync + Send</span>
+    <span style="color: #ECBC9C;">file</span>: <span style="color: #89C5C8;">Arc</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Mutex</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">fs</span>::<span style="color: #89C5C8;">File</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">&gt;</span>,
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+The type <code>Arc&lt;Mutex&lt;std::fs::File&gt;&gt;</code> is necessary as <code>x7</code> requires all types to be thread safe.
+</p>
+
+<p>
+Now that we have a struct, let's expose a way to generate one from <code>x7</code>. We want the following <code>x7</code> expression to work:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #DCDCCC;">(</span>fs::open <span style="color: #D9A0A0;">"file-name"</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+This will map to a <code>Expr::String("file-name")</code> in the interpreter, so we need two methods:
+</p>
+
+<ol class="org-ol">
+<li>A way to open files given a <code>String</code></li>
+<li>A way to open files given an <code>Expr::String</code></li>
+</ol>
+
+<p>
+With that in mind, here's the two relevant methods:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">FileRecord</span> <span style="color: #DCDCCC;">{</span>
+      <span style="color: #ACD2AC;">/// Open a file with the given Path</span>
+      <span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #CCF8CC;">)</span> <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">open_file</span><span style="color: #CCF8CC;">(</span><span style="color: #ECBC9C;">path</span>: <span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+      <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Open the file with liberal permissions.</span>
+      <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">f</span> = <span style="color: #89C5C8;">OpenOptions</span>::new<span style="color: #DDCC9C;">()</span>
+          .write<span style="color: #DDCC9C;">(</span><span style="color: #FDECBC; font-weight: bold;">true</span><span style="color: #DDCC9C;">)</span>
+          .create<span style="color: #DDCC9C;">(</span><span style="color: #FDECBC; font-weight: bold;">true</span><span style="color: #DDCC9C;">)</span>
+          .read<span style="color: #DDCC9C;">(</span><span style="color: #FDECBC; font-weight: bold;">true</span><span style="color: #DDCC9C;">)</span>
+          .open<span style="color: #DDCC9C;">(</span>path.clone<span style="color: #A0EDF0;">()</span><span style="color: #DDCC9C;">)</span>
+          .map_err<span style="color: #DDCC9C;">(</span>|e| <span style="color: #9CC7FB;">anyhow!</span><span style="color: #A0EDF0;">(</span><span style="color: #D9A0A0;">"Could not open file \"{}\" because {}"</span>, &amp;path, e<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span>;
+      <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Make the path pretty.</span>
+      <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">abs_path</span> = <span style="color: #CCF8CC;">fs</span>::canonicalize<span style="color: #DDCC9C;">(</span>path<span style="color: #DDCC9C;">)</span>
+          .map_err<span style="color: #DDCC9C;">(</span>|e| <span style="color: #9CC7FB;">anyhow!</span><span style="color: #A0EDF0;">(</span><span style="color: #D9A0A0;">"Could not canonicalize path! {}"</span>, e<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span>
+          .to_str<span style="color: #DDCC9C;">()</span>
+          .ok_or_else<span style="color: #DDCC9C;">(</span>|| <span style="color: #9CC7FB;">anyhow!</span><span style="color: #A0EDF0;">(</span><span style="color: #D9A0A0;">"Could not represent path as UTF-8 string"</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span>
+          .into<span style="color: #DDCC9C;">()</span>;
+      <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">record! is a macro to assist in making LispResult&lt;Expr::Record&gt; types</span>
+      <span style="color: #9CC7FB;">record!</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">FileRecord</span>::new<span style="color: #A0EDF0;">(</span>f, abs_path<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>
+  <span style="color: #CCF8CC;">}</span>
+
+  <span style="color: #ACD2AC;">/// Open a file from x7</span>
+  <span style="color: #ACD2AC;">/// This function signature will let us expose it directly to the interpreter</span>
+  <span style="color: #FDECBC; font-weight: bold;">pub</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">crate</span><span style="color: #CCF8CC;">)</span> <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">from_x7</span><span style="color: #CCF8CC;">(</span><span style="color: #ECBC9C;">exprs</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span>, <span style="color: #ECBC9C;">_symbol_table</span>: &amp;<span style="color: #89C5C8;">SymbolTable</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+      <span style="color: #9CC7FB;">exact_len!</span><span style="color: #DDCC9C;">(</span>exprs, <span style="color: #CCF8CC;">1</span><span style="color: #DDCC9C;">)</span>;
+      <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">path</span> = exprs<span style="color: #DDCC9C;">[</span><span style="color: #CCF8CC;">0</span><span style="color: #DDCC9C;">]</span>.get_string<span style="color: #DDCC9C;">()</span><span style="color: #DCDCCC; font-weight: bold;">?</span>;
+      <span style="color: #89C5C8;">FileRecord</span>::open_file<span style="color: #DDCC9C;">(</span>path<span style="color: #DDCC9C;">)</span>
+  <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Now that we have the ability to make a <code>FileRecord</code>, we'll need to implement <code>Record</code>
+so it can be understood by the interpreter (<code>Expr::Record</code>).
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">Record</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">FileRecord</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">call_method</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">sym</span>: &amp;<span style="color: #89C5C8;">str</span>, <span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+      <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We have no methods yet.</span>
+      <span style="color: #9CC7FB;">unknown_method!</span><span style="color: #DDCC9C;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, sym<span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">type_name</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; &amp;'<span style="color: #FDECBC; font-weight: bold;">static</span> <span style="color: #89C5C8;">str</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #D9A0A0;">"FileRecord"</span>
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">display</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">String</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #DCDCCC; font-weight: bold;">format!</span><span style="color: #DDCC9C;">(</span><span style="color: #D9A0A0;">"File&lt;</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">&gt;"</span>, <span style="color: #FDECBC; font-weight: bold;">self</span>.path<span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">debug</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">String</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">self</span>.display<span style="color: #DDCC9C;">()</span>
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">clone</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">RecordType</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Box</span>::new<span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">Clone</span>::clone<span style="color: #A0EDF0;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">methods</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Vec</span><span style="color: #CCF8CC;">&lt;</span>&amp;'<span style="color: #FDECBC; font-weight: bold;">static</span> <span style="color: #89C5C8;">str</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Vec</span>::new<span style="color: #DDCC9C;">()</span>
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">id</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">u64</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">use</span> <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">collections</span>::<span style="color: #CCF8CC;">hash_map</span>::<span style="color: #89C5C8;">DefaultHasher</span>;
+        <span style="color: #FDECBC; font-weight: bold;">use</span> <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">hash</span>::<span style="color: #DDCC9C;">{</span><span style="color: #89C5C8;">Hash</span>, <span style="color: #89C5C8;">Hasher</span><span style="color: #DDCC9C;">}</span>;
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">h</span> = <span style="color: #89C5C8;">DefaultHasher</span>::new<span style="color: #DDCC9C;">()</span>;
+        <span style="color: #FDECBC; font-weight: bold;">self</span>.path.hash<span style="color: #DDCC9C;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> h<span style="color: #DDCC9C;">)</span>;
+        h.finish<span style="color: #DDCC9C;">()</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+We also need to expose <code>FileRecord::from_x7</code> to the interpreter, so let's head back and add it to <code>make_stdlib_fns</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"> <span style="color: #9CC7FB;">make_stdlib_fns!</span><span style="color: #DCDCCC;">{</span>
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">elided functions...</span>
+  <span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"call_method"</span>, <span style="color: #CCF8CC;">2</span>, call_method, <span style="color: #FDECBC; font-weight: bold;">true</span>, <span style="color: #D9A0A0;">"&lt;doc-string&gt;"</span><span style="color: #CCF8CC;">)</span>,
+  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Open a file</span>
+  <span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"fs::open"</span>, <span style="color: #CCF8CC;">1</span>, <span style="color: #89C5C8;">FileRecord</span>::from_x7, <span style="color: #FDECBC; font-weight: bold;">true</span>, <span style="color: #D9A0A0;">"Open a file."</span><span style="color: #CCF8CC;">)</span>,
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+We can now compile and run <code>x7</code> to see what happens:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp">&gt;&gt;&gt; <span style="color: #DCDCCC;">(</span>def f <span style="color: #CCF8CC;">(</span>fs::open <span style="color: #D9A0A0;">"hello-world.txt"</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+nil
+&gt;&gt;&gt; f
+File&lt;/home/david/programming/x7/hello-world.txt&gt;
+</pre>
+</div>
+
+<p>
+Nice! We've opened a file. We can now implement some other useful methods on <code>FileRecord</code> like reading from a file:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">FileRecord</span> <span style="color: #DCDCCC;">{</span>
+  <span style="color: #ACD2AC;">/// Read the contents of a file to a String,</span>
+  <span style="color: #ACD2AC;">/// rewinding the cursor to the front.</span>
+  <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">read_all</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+      <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">buf</span> = <span style="color: #89C5C8;">String</span>::new<span style="color: #DDCC9C;">()</span>;
+      <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">guard</span> = <span style="color: #FDECBC; font-weight: bold;">self</span>.file.lock<span style="color: #DDCC9C;">()</span>;
+      guard
+          .read_to_string<span style="color: #DDCC9C;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> buf<span style="color: #DDCC9C;">)</span>
+          .map_err<span style="color: #DDCC9C;">(</span>|e| <span style="color: #9CC7FB;">anyhow!</span><span style="color: #A0EDF0;">(</span><span style="color: #D9A0A0;">"Failed to read to string {}"</span>, e<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span>;
+      <span style="color: #9CC7FB;">rewind_file!</span><span style="color: #DDCC9C;">(</span>guard<span style="color: #DDCC9C;">)</span>;
+      <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span>buf<span style="color: #DDCC9C;">)</span>
+  <span style="color: #CCF8CC;">}</span>
+
+  <span style="color: #ACD2AC;">/// Read the contents of a FileRecord to a string.</span>
+  <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">read_to_string</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+      <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We want no arguments.</span>
+      <span style="color: #9CC7FB;">exact_len!</span><span style="color: #DDCC9C;">(</span>args, <span style="color: #CCF8CC;">0</span><span style="color: #DDCC9C;">)</span>;
+      <span style="color: #FDECBC; font-weight: bold;">self</span>.read_all<span style="color: #DDCC9C;">()</span>.map<span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">String</span><span style="color: #DDCC9C;">)</span>
+  <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+We can update our <code>Record</code> implementation for <code>FileRecord</code> to include this method:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">Record</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">FileRecord</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">call_method</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">sym</span>: &amp;<span style="color: #89C5C8;">str</span>, <span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">LispResult</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">match</span> sym <span style="color: #DDCC9C;">{</span>
+            <span style="color: #D9A0A0;">"read_to_string"</span> =&gt; <span style="color: #FDECBC; font-weight: bold;">self</span>.read_to_string<span style="color: #A0EDF0;">(</span>args<span style="color: #A0EDF0;">)</span>,
+            _ =&gt; <span style="color: #9CC7FB;">unknown_method!</span><span style="color: #A0EDF0;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span>, sym<span style="color: #A0EDF0;">)</span>,
+        <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And use it:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp">~ echo <span style="color: #D9A0A0;">"hello"</span> &gt; hello-world.txt
+~ x7
+&gt;&gt;&gt; <span style="color: #DCDCCC;">(</span>def f <span style="color: #CCF8CC;">(</span>fs::open <span style="color: #D9A0A0;">"hello-world.txt"</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+&gt;&gt;&gt; <span style="color: #DCDCCC;">(</span>call_method f <span style="color: #D9A0A0;">"read_to_string"</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #D9A0A0;">"hello"</span>
+</pre>
+</div>
+
+<p>
+Awesome! We're able to call methods on <code>FileRecord</code>. It's the same process to implement <code>.write</code> and other useful file operations, so we'll elide it. This is great stuff, and would be even better with some syntactic sugar.
+</p>
+
+<p>
+Let's add method call syntax so these two expressions are equal:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp">&gt;&gt;&gt; <span style="color: #DCDCCC;">(</span>call_method f <span style="color: #D9A0A0;">"read_to_string"</span><span style="color: #DCDCCC;">)</span>
+&gt;&gt;&gt; <span style="color: #DCDCCC;">(</span>.read_to_string f<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org2499492" class="outline-3">
+<h3 id="org2499492">Adding Method call syntax in x7</h3>
+<div class="outline-text-3" id="text-org2499492">
+<p>
+Without getting too much in the parser weeds, <code>.method</code> is parsed into an <code>Expr::Symbol</code>.
+We can modify the parser to recognize the period, and instead parse it into a <code>Function</code> that calls our method for us.
+</p>
+
+<p>
+The <code>parse_symbol</code> function is defined as:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">parse_symbol</span><span style="color: #DCDCCC;">&lt;</span>'<span style="color: #ECBC9C;">a</span><span style="color: #DCDCCC;">&gt;(</span><span style="color: #ECBC9C;">i</span>: &amp;'<span style="color: #ECBC9C;">a</span> <span style="color: #89C5C8;">str</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">IResult</span><span style="color: #DCDCCC;">&lt;</span>&amp;'<span style="color: #ECBC9C;">a</span> <span style="color: #89C5C8;">str</span>, <span style="color: #89C5C8;">Expr</span>, <span style="color: #89C5C8;">VerboseError</span><span style="color: #CCF8CC;">&lt;</span>&amp;'<span style="color: #ECBC9C;">a</span> <span style="color: #89C5C8;">str</span><span style="color: #CCF8CC;">&gt;</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    map<span style="color: #CCF8CC;">(</span>take_while1<span style="color: #DDCC9C;">(</span>is_symbol_char<span style="color: #DDCC9C;">)</span>, |<span style="color: #ECBC9C;">sym</span>: &amp;<span style="color: #89C5C8;">str</span>| <span style="color: #DDCC9C;">{</span>
+        <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Symbol</span><span style="color: #A0EDF0;">(</span>sym.into<span style="color: #ACD2AC;">()</span><span style="color: #A0EDF0;">)</span>
+    <span style="color: #DDCC9C;">}</span><span style="color: #CCF8CC;">)(</span>i<span style="color: #CCF8CC;">)</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+So all it does is try to recognize a symbol, and then transform the type when it fully parses one. We'll modify it to recognize if a symbol starts with a period, and if so, call <code>make_method_call</code> and return an <code>Expr::Function</code>.
+</p>
+
+<p>
+Let's first make <code>make_method_call</code>:
+((if (random_bool) + -) 10 5)
+</p>
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">make_method_call</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">method</span>: <span style="color: #89C5C8;">String</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Expr</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Import some useful types</span>
+    <span style="color: #FDECBC; font-weight: bold;">use</span> <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">symbols</span>::<span style="color: #89C5C8;">Function</span>;
+    <span style="color: #FDECBC; font-weight: bold;">use</span> <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">sync</span>::<span style="color: #89C5C8;">Arc</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">method_clone</span> = method.clone<span style="color: #CCF8CC;">()</span>;
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">This is the cool part. We're making a closure that obeys</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">the X7FunctionPtr type.</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">When we call .write, it'll call this function.</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">method_fn</span> = <span style="color: #FDECBC; font-weight: bold;">move</span> |<span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">&gt;</span>, <span style="color: #ECBC9C;">_sym</span>: &amp;<span style="color: #89C5C8;">SymbolTable</span>| <span style="color: #CCF8CC;">{</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">First item is a record, and get it</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">rec</span> = <span style="color: #FDECBC; font-weight: bold;">match</span> args<span style="color: #DDCC9C;">[</span><span style="color: #CCF8CC;">0</span><span style="color: #DDCC9C;">]</span>.get_record<span style="color: #DDCC9C;">()</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #89C5C8;">Ok</span><span style="color: #A0EDF0;">(</span>rec<span style="color: #A0EDF0;">)</span> =&gt; rec,
+            <span style="color: #89C5C8;">Err</span><span style="color: #A0EDF0;">(</span>e<span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Err</span><span style="color: #A0EDF0;">(</span>e<span style="color: #A0EDF0;">)</span>,
+        <span style="color: #DDCC9C;">}</span>;
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">`rec` is a record, so call the method.</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Note that we move `method_clone` into this this closure!</span>
+        <span style="color: #FDECBC; font-weight: bold;">use</span> <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">records</span>::<span style="color: #89C5C8;">Record</span>;
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">The layout of `args` is: (&lt;record&gt; &lt;arg1&gt; &lt;arg2&gt; ...),</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">and the type signature we have is Record::call_method(method, args)</span>
+        rec.call_method<span style="color: #DDCC9C;">(</span>&amp;method_clone, args.clone<span style="color: #A0EDF0;">()</span>.slice<span style="color: #A0EDF0;">(</span><span style="color: #CCF8CC;">1</span>..<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>;
+    <span style="color: #CCF8CC;">}</span>;
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Make a Function struct</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">f</span> = <span style="color: #89C5C8;">Function</span>::new<span style="color: #CCF8CC;">(</span>
+        <span style="color: #DCDCCC; font-weight: bold;">format!</span><span style="color: #DDCC9C;">(</span><span style="color: #D9A0A0;">"method_call&lt;</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">&gt;"</span>, method<span style="color: #DDCC9C;">)</span>, <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">function name</span>
+        <span style="color: #CCF8CC;">1</span>,                                  <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">number of args</span>
+        <span style="color: #89C5C8;">Arc</span>::new<span style="color: #DDCC9C;">(</span>method_fn<span style="color: #DDCC9C;">)</span>,                <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">function pointer</span>
+        <span style="color: #FDECBC; font-weight: bold;">true</span>,                               <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">eval args</span>
+    <span style="color: #CCF8CC;">)</span>;
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Return an Expr::Function</span>
+    <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Function</span><span style="color: #CCF8CC;">(</span>f<span style="color: #CCF8CC;">)</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+This is pretty cool - we're transforming a symbol into a function. All we need to do
+is to add an if-gate into <code>parse_symbol</code>, and we're set!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">parse_symbol</span><span style="color: #DCDCCC;">&lt;</span>'<span style="color: #ECBC9C;">a</span><span style="color: #DCDCCC;">&gt;(</span><span style="color: #ECBC9C;">i</span>: &amp;'<span style="color: #ECBC9C;">a</span> <span style="color: #89C5C8;">str</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">IResult</span><span style="color: #DCDCCC;">&lt;</span>&amp;'<span style="color: #ECBC9C;">a</span> <span style="color: #89C5C8;">str</span>, <span style="color: #89C5C8;">Expr</span>, <span style="color: #89C5C8;">VerboseError</span><span style="color: #CCF8CC;">&lt;</span>&amp;'<span style="color: #ECBC9C;">a</span> <span style="color: #89C5C8;">str</span><span style="color: #CCF8CC;">&gt;</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    map<span style="color: #CCF8CC;">(</span>take_while1<span style="color: #DDCC9C;">(</span>is_symbol_char<span style="color: #DDCC9C;">)</span>, |<span style="color: #ECBC9C;">sym</span>: &amp;<span style="color: #89C5C8;">str</span>| <span style="color: #DDCC9C;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">if</span> sym.starts_with<span style="color: #A0EDF0;">(</span><span style="color: #D9A0A0;">'.'</span><span style="color: #A0EDF0;">)</span> <span style="color: #A0EDF0;">{</span>
+            make_method_call<span style="color: #ACD2AC;">(</span>sym<span style="color: #9CC7FB;">[</span><span style="color: #CCF8CC;">1</span>..<span style="color: #9CC7FB;">]</span>.into<span style="color: #9CC7FB;">()</span><span style="color: #ACD2AC;">)</span> <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">sym[1..] =&gt; drop the period</span>
+        <span style="color: #A0EDF0;">}</span> <span style="color: #FDECBC; font-weight: bold;">else</span> <span style="color: #A0EDF0;">{</span>
+            <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Symbol</span><span style="color: #ACD2AC;">(</span>sym.into<span style="color: #9CC7FB;">()</span><span style="color: #ACD2AC;">)</span>
+        <span style="color: #A0EDF0;">}</span>
+    <span style="color: #DDCC9C;">}</span><span style="color: #CCF8CC;">)(</span>i<span style="color: #CCF8CC;">)</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+We can start <code>x7</code> and test it out:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp">&gt;&gt;&gt; .read_to_string
+Fn&lt;method_call&lt;read_to_string&gt;, <span style="color: #CCF8CC;">1</span>, [ ]&gt;
+</pre>
+</div>
+
+<p>
+Nice, we're getting a function from our parser. We can try using it:
+</p>
+
+
+<div class="org-src-container">
+<pre class="src src-rust">&gt;&gt;&gt; <span style="color: #DCDCCC;">(</span>def f <span style="color: #CCF8CC;">(</span><span style="color: #CCF8CC;">fs</span>::open <span style="color: #D9A0A0;">"hello-world.txt"</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+&gt;&gt;&gt; <span style="color: #DCDCCC;">(</span>.read_to_string f<span style="color: #DCDCCC;">)</span>
+<span style="color: #D9A0A0;">"hello"</span>
+</pre>
+</div>
+
+<p>
+And that's it! We've implemented records in <code>x7</code>. I hope you enjoyed reading the article!
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: David Briggs</p>
+<p class="date">Created: 2020-09-12 Sat 18:45</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,698 @@
+# -*- find-file-hook: make-blogging-mode -*-
+#+AUTHOR: David Briggs
+#+TITLE: Implementing Records in x7
+#+OPTIONS: html-style:nil num:nil ^:nil
+<2020-05-22 Fri>
+#+ATTR_HTML: target="_blank"
+
+
+* Implementing Records in x7
+
+[[https://github.com/dpbriggs/x7][x7]] is a lisp I made to explore language design and interpreters. Here's the hello world for it:
+
+#+begin_src lisp
+(println "Hello World!")
+#+end_src
+
+It's got all the functional niceness that lisps provide:
+
+#+begin_src clojure
+  ;; Define a function which squares the input
+  (defn square (x)
+    (* x x))
+
+  ;; predicate for x mod 4 == 1
+  (defn is-one-mod-4 (x)
+    (= 1 (% x 4)))
+
+  ;; Filter and map the first two hundred numbers
+  (filter is-one-mod-4
+          (map square (range 200)))
+
+  ;; Outputs: (1 9 25 49 81 121 169 225 ...)
+#+end_src
+
+=x7= has all the nice immutable, stateless fun that functional languages provide.
+What it can't do is represent types which are internally stateful, like files or sockets.
+This article will explain how we can add state to the language in the form of =Records=.
+
+The motivation for this that the OS expects you maintain some state if you want to operate on files (or really any IO). There's tricks to avoid internally mutable state, but it's way more fun to add it to the language.
+
+=Records=, or objects, allow us to encapsulate state in one place, that you can call methods on.
+We'll work towards opening, writing, and reading from a file in =x7=. This is what it looks like:
+
+
+#+begin_src clojure
+  ;; Open a file
+  (def my-file (fs::open "my_file.txt"))
+
+  ;; .write is a method of the record File,
+  ;; which will write strings to the file
+  (.write my-file "Hello World")
+
+  ;; Similarly, we can use the .read_to_string
+  ;; method to read the file contents
+  (.read_to_string my-file)
+#+end_src
+
+Before we can implement Records, we'll need a better idea of =x7='s interpreter internals.
+
+** x7 Interpreter Internals
+
+To run =x7= programs, we need to parse the incoming strings into a form we can actually evaluate. Central to this is the type =Expr=, which represents all possible types in the interpreter:
+
+#+begin_src rust
+  pub(crate) enum Expr {
+      Num(Num),
+      Symbol(Symbol),
+      List(Vector<Expr>),
+      Function(Function),
+      // elided variants...
+  }
+#+end_src
+
+The shown members of that enum are the minimum required variants to evaluate simple expressions like =(+ 1 1)=. If you're not familiar with lisps, this is the same thing as =1 + 1=.
+
+** Parsing "(+ 1 1)"
+
+The string ="(+ 1 1)"= needs to get transformed into a type we can operate on.
+The details of the [[https://github.com/dpbriggs/x7/blob/serialization/src/parser.rs#L1][parser]] aren't relevant this article. All we really need to know is that =(+ 1 1)= gets transformed into the following =Expr= type:
+
+#+begin_src rust
+  Expr::List(
+      Expr::Symbol("+"),
+      Expr::Num(1),
+      Expr::Num(1),
+  )
+#+end_src
+
+This form is very convenient as we can recursively evaluate it to facilitate computation.
+
+** Evaluating (+ 1 1)
+
+Crucial to lisps is the =expression=, or the idea that types just exist and propagate through computation. Evaluation simply stated is a computation process of taking an expression, and returning another expression. For example, typing =3.3= in the =x7= interpreter returns =3.3=, another expression. In contrast, =(+ 1 1)= is considerably more complex, as it represents a function call to add two numbers. We'll need to work our way there.
+
+To build our way to evaluating =(+ 1 1)=, we'll need to discuss core concepts like =Expressions=, =Symbols=, and =Lists=.
+
+*** Evaluating Expressions
+
+As mentioned earlier, evaluation is fundamental to the function of =x7=. More importantly, different types evaluate differently!
+
+Here's a quick preview of what different types evaluate to:
+
+#+CAPTION: Eval Behaviour for diffent types
+#+ATTR_HTML: :border 2 :rules all :frame border :width 70%
+|----------+-----------------------------------------------------------------------|
+| Type     | Eval Behaviour                                                        |
+|----------+-----------------------------------------------------------------------|
+| Num      | Itself - another num.                                                 |
+| Function | Itself - the same function.                                           |
+| Symbol   | A lookup to find whatever the symbol represents (function, etc).      |
+| Lists    | A function call, where the first member is interpreted as a function. |
+|----------+-----------------------------------------------------------------------|
+
+If we start the =x7= interpreter, we can see this in action:
+
+#+begin_example
+>>> 3.3                ;; Num
+3.3
+>>> (fn (x) (x))       ;; Function
+Fn<AnonFn, 1, [ x ]>
+>>> +                  ;; Symbol
+Fn<+, 1, [ ]>
+>>> (+ 1 1)            ;; List
+2
+#+end_example
+
+With this behaviour in mind, we'll need to better understand how Symbols work in the interpreter.
+
+*** Evaluating Symbols
+
+Symbols act as references to something else in the interpreter - things like constants or functions. =x7= uses the =SymbolTable= type, which provides a =lookup(&self, key: &Expr)= method to map symbols to expressions in the interpreter.
+
+The implementation of =eval= for =Symbol= looks like:
+
+#+begin_src rust
+  // self is an Expr
+  if self.is_symbol() {
+      return symbol_table.lookup(&self);
+  }
+#+end_src
+
+Part of the =x7= initialization process is to populate the symbol table with the standard library - either from =rust= with the =make_stdlib_fns!= macro or
+the =x7= files in =stdlib/=. If we disable symbol population you'll see that =x7= runs just fine, but isn't very useful:
+
+#+begin_example
+  ;; x7 without a stdlib isn't very useful
+  >>> +
+  Error: Unknown Symbol +
+#+end_example
+
+*** Evaluating Lists
+
+The next area is to understand is the interaction between =Lists= and =Symbols=. A list evaluation in =x7= (and lisps) is a _function call_,
+with the following convention:
+
+#+begin_src lisp
+(<fn-expr> <arg1> <arg2> ...)
+#+end_src
+
+The goal then is for the =x7= interpreter to evaluate =<fn-expr>= to a function, and then call the function with the args.
+The vast majority of time =<fn-expr>= will be a symbol, like =+= or =-=, so it'll be a symbol lookup.
+The process we want then:
+
+1. Evaluate =<fn-expr>=, and hope it returns a =Function=
+2. Call the =Function= with the args provided.
+
+In =rust= this looks like:
+
+#+begin_src rust
+  if let Ok(mut list) = self.get_list() {
+      // Empty lists are _not_ function calls
+      if list.is_empty() {
+          return Ok(self.clone());
+      }
+
+      let head = list.pop_front().unwrap();
+      let tail = list;
+
+      return head.eval(&symbol_table)?.call_fn(tail, symbol_table);
+  }
+#+end_src
+
+The last line is the operative one - we evaluate the first item (=head=),
+and the use the =call_fn= method to call the function.
+
+If you're not super familiar with rust, the last line can be understood as:
+
+1. Evaluate =head=, and early return if we get an error.
+   1. The most common error is simply the symbol not resolving. More exotic errors could be something like =head= is itself a function call that failed.
+   2. To elaborate further, =head= can evaluate to _anything_. While this case is intended to map symbols to functions, anything can happen here. If we didn't evaluate =head=, =Symbol("+")= would never become the function =Fn<+, 1, [ ]>=.
+      1. For the curious, =((if (random_bool) + -) 10 5)= is a valid =x7= program. It randomly returns 5 or 15.
+2. Call the method =call_fn=.
+   1. If =head= doesn't evaluate to a function, return the error =NotAFunction=
+   2. If it's a function, call it with args =tail=
+
+Notably, we don't evaluate =tail=. To allow conditional constructs like =if= or =cond= to not evaluate branches not taken, we need a way to opt out of evaluation! This is implemented as a flag on the =Function= struct which can be controlled by the =rust= portion of the standard library.
+
+Now that we have an overview of the =x7= interpreter internals, we can actually add records to the language!
+
+** The Record Trait
+
+To represent types which are internally stateful, we'll add a trait called =Record= to the language. It needs to express following behaviours:
+
+1. Call methods with arguments.
+2. Represent the type in a display and debug way.
+3. Represent the type name as a string, and it's methods.
+4. Uniquely identify the type (hash).
+5. Clone the type safely.
+
+Aside from calling methods, most of these items are related to making sure
+error messages are nice, or slotting it in cleanly with the rest of the interpreter machinery.
+
+Here's the trait in =rust=:
+
+#+begin_src rust
+  /// Fundamental trait for records.
+  ///
+  /// Records allow x7 to represent a variety of internally mutable types
+  /// while not expanding the Expr enum too much. These types are responsible for
+  /// implementing RecordDoc if they want to have documentation.
+  pub(crate) trait Record: Sync + Send {
+      /// Call a method on this record.
+      /// (.method_name <rec> arg1 arg2 arg3)
+      /// Becomes:
+      /// (&self: <rec>, sym: "method_name", args: vector![arg1, arg2, arg3])
+      fn call_method(&self, sym: &str, args: Vector<Expr>) -> LispResult<Expr>;
+
+      /// Uniquely identify this record
+      fn id(&self) -> u64 {
+          0
+      }
+      /// Nicely display the record type.
+      fn display(&self) -> String;
+
+      /// Add more information for debug printing
+      fn debug(&self) -> String;
+
+      /// Clone the object.
+      fn clone(&self) -> RecordType;
+
+      /// Return the names of the methods for help messages.
+      fn methods(&self) -> Vec<&'static str>;
+
+      /// Return the type name for nice help messages
+      fn type_name(&self) -> &'static str;
+  }
+#+end_src
+
+Now that we have a trait, we need a fundamental type we can export and use throughout
+=x7=. Since we want to use trait objects, a =Box= is a natural choice:
+
+#+begin_src rust
+pub(crate) type RecordType = Box<dyn Record>;
+#+end_src
+
+I'll elide the implementation details to get =Record= implemented for =RecordType=,
+but if you're curious, they can be found [[https://github.com/dpbriggs/x7/blob/master/src/records/record.rs#L48][here]].
+
+
+*** Wiring RecordType into x7
+
+To integrate =RecordType= into the language, we'll need to add it to aforementioned
+=Expr= enum. Here's what it looked like before we add =Record=:
+
+#+begin_src rust
+  #[derive(Clone, Hash)]
+  pub(crate) enum Expr {
+      Num(Num),
+      Symbol(Symbol),
+      String(String),
+      // truncated...
+  }
+#+end_src
+
+And after:
+
+#+begin_src rust
+  #[derive(Clone, Hash)]
+  pub(crate) enum Expr {
+      Num(Num),
+      Symbol(Symbol),
+      String(String),
+      Record(crate::records::RecordType),
+      // truncated...
+  }
+#+end_src
+
+It's just that easy. We can use compiler errors to figure out what we're missing.
+
+The compiler errors tells us that we're missing =Hash=, =PartialEq=, and =Clone= on =RecordType=:
+
+#+begin_src rust
+  /// We can stick whatever we want into hashmaps, so we need Hash implemented
+  impl Hash for RecordType {
+      fn hash<H: Hasher>(&self, state: &mut H) {
+          self.id().hash(state);
+      }
+  }
+
+  /// We also need to equality check RecordTypes
+  /// As their internal state may differ, always return false.
+  /// This could be improved.
+  impl PartialEq for RecordType {
+      fn eq(&self, _other: &RecordType) -> bool {
+          false
+      }
+  }
+
+  /// x7 clones types all over the place
+  impl Clone for RecordType {
+      fn clone(&self) -> RecordType {
+          Record::clone(self)
+      }
+  }
+#+end_src
+
+Great! We now have the requisite traits implemented for =RecordType=, and
+aside from a few changes like my custom =Display= implementation, we're good to go.
+
+The last thing we'll want is a way to grab a =RecordType= out of the enum when we want it:
+
+#+begin_src rust
+impl Expr {
+  // ... elided...
+  pub(crate) fn get_record(&self) -> LispResult<RecordType> {
+      if let Expr::Record(r) = self {
+          Ok(r.clone())
+      } else {
+          bad_types!("record", &self)
+      }
+  }
+}
+#+end_src
+
+This will let us grab a record type in our standard library and have nice error messages
+if we don't.
+
+The next thing we'll want to do is add a standard library function to call methods!
+
+*** Adding call_method to the standard library
+
+Now that =RecordType= is embedded in the interpreter's machinery, we can actually use it!
+We will want a way to explicitly call methods in the standard library, =stdlib::call_method=.
+
+We won't have the =.method-call= syntactic sugar yet, so a free standing =x7= function
+will have to do.
+
+Recall the signature of =Record::call_method=:
+
+#+begin_src rust
+fn call_method(&self, sym: &str, args: Vector<Expr>) -> LispResult<Expr>;
+#+end_src
+
+We'll want a standard library method that takes:
+
+1. A record
+2. A method on that record
+3. Some args for that method.
+
+Thankfully this is pretty straightforward. All functions in =x7= must have the following type:
+
+#+begin_src rust
+pub(crate) type X7FunctionPtr =
+    Arc<dyn Fn(Vector<Expr>, &SymbolTable) -> LispResult<Expr> + Sync + Send>;
+#+end_src
+
+In =rust=, this looks like:
+
+#+begin_src rust
+  fn call_method(exprs: Vector<Expr>, _symbol_table: &SymbolTable) -> LispResult<Expr> {
+     // TODO: Implement the function
+  }
+#+end_src
+
+The next issue to tackle is the argument layout for =stdlib::call_method=.
+
+We're only given a list of arguments, so we'll need to define a calling convention:
+
+#+begin_src lisp
+(call_method <record> <method-name> <args>...)
+#+end_src
+
+So we'll expect a record as the first member, and then the method name, and finally the args.
+For example, here's how we'd expect writing to a file to look like:
+
+#+begin_src lisp
+(call_method my-file "write" "hello world")
+#+end_src
+
+Thanks to the =Expr::get_record= function we made earlier, we can easily implement =stdlib::call_method=:
+
+#+begin_src rust
+  fn call_method(exprs: Vector<Expr>, _symbol_table: &SymbolTable) -> LispResult<Expr> {
+      // First list member is a record.
+      let rec = exprs[0].get_record()?;
+
+      // Second list member is the method string.
+      let method = &exprs[1].get_string()?;
+
+      // Collect the args in the list.
+      let args = exprs.clone().slice(2..); // .clone() is O(1) and .slice needs a &mut
+
+      // Finally, call the method on the record with args
+      use crate::records::Record;
+      rec.call_method(method, args)
+  }
+#+end_src
+
+Now that we have the function, we'll need to make it accessible from the interpreter.
+=x7= uses a macro called =make_stdlib_fns= to expose rust functions to the interpreter, so we need to just slot it in:
+
+#+begin_src rust
+  make_stdlib_fns!{
+    // elided functions...
+    ("call_method", 2, call_method, true, "<doc-string>"),
+  }
+#+end_src
+
+This can be read as:
+
+1. Expose =stdlib::call_method= to the interpreter with the symbol =call_method=, and
+2. It expects at least two arguments, and
+3. Ask the interpreter to evaluate the arguments (=true=), and finally
+4. Have the docstring ="<doc-string>"=.
+
+We can start the interpreter and ask it to evaluate the symbol =call_method=:
+
+#+begin_src lisp
+>>> call_method
+Fn<call_method, 2, [ ]>
+#+end_src
+
+Nice! We can't really do much with it as we haven't actually implemented =Record= on any types yet, so let's do that!
+
+*** Implementing the File Record
+
+The original motivation for adding =Record= to =x7= is the ability to open, read, and write to files.
+We'll back the =x7= File implementation by the =rust= File struct, so let's make a new file in =x7= - =records/file.rs=:
+
+We will start by making a =FileRecord= struct:
+
+#+begin_src rust
+  #[derive(Clone, Debug)]
+  pub(crate) struct FileRecord {
+      path: String,
+      // The Record trait requires Sync + Send
+      file: Arc<Mutex<std::fs::File>>,
+  }
+#+end_src
+
+The type =Arc<Mutex<std::fs::File>>= is necessary as =x7= requires all types to be thread safe.
+
+Now that we have a struct, let's expose a way to generate one from =x7=. We want the following =x7= expression to work:
+
+#+begin_src lisp
+(fs::open "file-name")
+#+end_src
+
+This will map to a =Expr::String("file-name")= in the interpreter, so we need two methods:
+
+1. A way to open files given a =String=
+2. A way to open files given an =Expr::String=
+
+With that in mind, here's the two relevant methods:
+
+#+begin_src rust
+  impl FileRecord {
+        /// Open a file with the given Path
+        pub(crate) fn open_file(path: String) -> LispResult<Expr> {
+        // Open the file with liberal permissions.
+        let f = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .read(true)
+            .open(path.clone())
+            .map_err(|e| anyhow!("Could not open file \"{}\" because {}", &path, e))?;
+        // Make the path pretty.
+        let abs_path = fs::canonicalize(path)
+            .map_err(|e| anyhow!("Could not canonicalize path! {}", e))?
+            .to_str()
+            .ok_or_else(|| anyhow!("Could not represent path as UTF-8 string"))?
+            .into();
+        // record! is a macro to assist in making LispResult<Expr::Record> types
+        record!(FileRecord::new(f, abs_path))
+    }
+
+    /// Open a file from x7
+    /// This function signature will let us expose it directly to the interpreter
+    pub(crate) fn from_x7(exprs: Vector<Expr>, _symbol_table: &SymbolTable) -> LispResult<Expr> {
+        exact_len!(exprs, 1);
+        let path = exprs[0].get_string()?;
+        FileRecord::open_file(path)
+    }
+  }
+#+end_src
+
+Now that we have the ability to make a =FileRecord=, we'll need to implement =Record=
+so it can be understood by the interpreter (=Expr::Record=).
+
+#+begin_src rust
+  impl Record for FileRecord {
+      fn call_method(&self, sym: &str, args: Vector<Expr>) -> LispResult<Expr> {
+        // We have no methods yet.
+        unknown_method!(self, sym)
+      }
+
+      fn type_name(&self) -> &'static str {
+          "FileRecord"
+      }
+
+      fn display(&self) -> String {
+          format!("File<{}>", self.path)
+      }
+
+      fn debug(&self) -> String {
+          self.display()
+      }
+
+      fn clone(&self) -> RecordType {
+          Box::new(Clone::clone(self))
+      }
+
+      fn methods(&self) -> Vec<&'static str> {
+          Vec::new()
+      }
+
+      fn id(&self) -> u64 {
+          use std::collections::hash_map::DefaultHasher;
+          use std::hash::{Hash, Hasher};
+          let mut h = DefaultHasher::new();
+          self.path.hash(&mut h);
+          h.finish()
+      }
+  }
+#+end_src
+
+We also need to expose =FileRecord::from_x7= to the interpreter, so let's head back and add it to =make_stdlib_fns=:
+
+#+begin_src rust
+   make_stdlib_fns!{
+    // elided functions...
+    ("call_method", 2, call_method, true, "<doc-string>"),
+    // Open a file
+    ("fs::open", 1, FileRecord::from_x7, true, "Open a file."),
+  }
+#+end_src
+
+We can now compile and run =x7= to see what happens:
+
+#+begin_src lisp
+>>> (def f (fs::open "hello-world.txt"))
+nil
+>>> f
+File</home/david/programming/x7/hello-world.txt>
+#+end_src
+
+Nice! We've opened a file. We can now implement some other useful methods on =FileRecord= like reading from a file:
+
+#+begin_src rust
+  impl FileRecord {
+    /// Read the contents of a file to a String,
+    /// rewinding the cursor to the front.
+    fn read_all(&self) -> LispResult<String> {
+        let mut buf = String::new();
+        let mut guard = self.file.lock();
+        guard
+            .read_to_string(&mut buf)
+            .map_err(|e| anyhow!("Failed to read to string {}", e))?;
+        rewind_file!(guard);
+        Ok(buf)
+    }
+
+    /// Read the contents of a FileRecord to a string.
+    fn read_to_string(&self, args: Vector<Expr>) -> LispResult<Expr> {
+        // We want no arguments.
+        exact_len!(args, 0);
+        self.read_all().map(Expr::String)
+    }
+  }
+#+end_src
+
+We can update our =Record= implementation for =FileRecord= to include this method:
+
+#+begin_src rust
+impl Record for FileRecord {
+    fn call_method(&self, sym: &str, args: Vector<Expr>) -> LispResult<Expr> {
+        match sym {
+            "read_to_string" => self.read_to_string(args),
+            _ => unknown_method!(self, sym),
+        }
+    }
+}
+#+end_src
+
+And use it:
+
+#+begin_src lisp
+  ~ echo "hello" > hello-world.txt
+  ~ x7
+  >>> (def f (fs::open "hello-world.txt"))
+  >>> (call_method f "read_to_string")
+  "hello"
+#+end_src
+
+Awesome! We're able to call methods on =FileRecord=. It's the same process to implement =.write= and other useful file operations, so we'll elide it. This is great stuff, and would be even better with some syntactic sugar.
+
+Let's add method call syntax so these two expressions are equal:
+
+#+begin_src lisp
+>>> (call_method f "read_to_string")
+>>> (.read_to_string f)
+#+end_src
+
+** Adding Method call syntax in x7
+
+Without getting too much in the parser weeds, =.method= is parsed into an =Expr::Symbol=.
+We can modify the parser to recognize the period, and instead parse it into a =Function= that calls our method for us.
+
+The =parse_symbol= function is defined as:
+
+#+begin_src rust
+fn parse_symbol<'a>(i: &'a str) -> IResult<&'a str, Expr, VerboseError<&'a str>> {
+    map(take_while1(is_symbol_char), |sym: &str| {
+        Expr::Symbol(sym.into())
+    })(i)
+}
+#+end_src
+
+So all it does is try to recognize a symbol, and then transform the type when it fully parses one. We'll modify it to recognize if a symbol starts with a period, and if so, call =make_method_call= and return an =Expr::Function=.
+
+Let's first make =make_method_call=:
+((if (random_bool) + -) 10 5)
+#+begin_src rust
+  fn make_method_call(method: String) -> Expr {
+      // Import some useful types
+      use crate::symbols::Function;
+      use std::sync::Arc;
+      let method_clone = method.clone();
+      // This is the cool part. We're making a closure that obeys
+      // the X7FunctionPtr type.
+      // When we call .write, it'll call this function.
+      let method_fn = move |args: Vector<Expr>, _sym: &SymbolTable| {
+          // First item is a record, and get it
+          let rec = match args[0].get_record() {
+              Ok(rec) => rec,
+              Err(e) => return Err(e),
+          };
+          // `rec` is a record, so call the method.
+          // Note that we move `method_clone` into this this closure!
+          use crate::records::Record;
+          // The layout of `args` is: (<record> <arg1> <arg2> ...),
+          // and the type signature we have is Record::call_method(method, args)
+          rec.call_method(&method_clone, args.clone().slice(1..));
+      };
+      // Make a Function struct
+      let f = Function::new(
+          format!("method_call<{}>", method), // function name
+          1,                                  // number of args
+          Arc::new(method_fn),                // function pointer
+          true,                               // eval args
+      );
+      // Return an Expr::Function
+      Expr::Function(f)
+  }
+#+end_src
+
+This is pretty cool - we're transforming a symbol into a function. All we need to do
+is to add an if-gate into =parse_symbol=, and we're set!
+
+#+begin_src rust
+  fn parse_symbol<'a>(i: &'a str) -> IResult<&'a str, Expr, VerboseError<&'a str>> {
+      map(take_while1(is_symbol_char), |sym: &str| {
+          if sym.starts_with('.') {
+              make_method_call(sym[1..].into()) // sym[1..] => drop the period
+          } else {
+              Expr::Symbol(sym.into())
+          }
+      })(i)
+  }
+#+end_src
+
+We can start =x7= and test it out:
+
+#+begin_src lisp
+>>> .read_to_string
+Fn<method_call<read_to_string>, 1, [ ]>
+#+end_src
+
+Nice, we're getting a function from our parser. We can try using it:
+
+
+#+begin_src rust
+>>> (def f (fs::open "hello-world.txt"))
+>>> (.read_to_string f)
+"hello"
+#+end_src
+
+And that's it! We've implemented records in =x7=. I hope you enjoyed reading the article!

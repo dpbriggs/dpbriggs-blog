@@ -22,11 +22,46 @@ macro_rules! simple_route {
     };
 }
 
-simple_route! {index, "/", "home"}
-simple_route! {resume, "/resume", "resume"}
-simple_route! {blog_index, "/blog", "blog"}
-simple_route! {linkedin, "/linkedin", "linkedin"}
-simple_route! {github, "/github", "github"}
+#[get("/")]
+fn index() -> Template {
+    let mut context = get_base_context("/");
+    context.kv.insert("title".to_owned(), "home".into());
+    Template::render(get_template("/"), context)
+}
+
+#[get("/resume")]
+fn resume() -> Template {
+    let mut context = get_base_context("/resume");
+    context.kv.insert("title".to_owned(), "resume".into());
+    Template::render(get_template("/resume"), context)
+}
+
+#[get("/blog")]
+fn blog_index() -> Template {
+    let mut context = get_base_context("/blog");
+    context.kv.insert("title".to_owned(), "blog".into());
+    Template::render(get_template("/blog"), context)
+}
+
+#[get("/linkedin")]
+fn linkedin() -> Template {
+    let mut context = get_base_context("/linkedin");
+    context.kv.insert("title".to_owned(), "linkedin".into());
+    Template::render(get_template("/linkedin"), context)
+}
+
+#[get("/github")]
+fn github() -> Template {
+    let mut context = get_base_context("/github");
+    context.kv.insert("title".to_owned(), "github".into());
+    Template::render(get_template("/github"), context)
+}
+
+// simple_route! {index, "/", "home"}
+// simple_route! {resume, "/resume", "resume"}
+// simple_route! {blog_index, "/blog", "blog"}
+// simple_route! {linkedin, "/linkedin", "linkedin"}
+// simple_route! {github, "/github", "github"}
 
 #[get("/robots.txt")]
 fn robots_txt() -> std::io::Result<&'static str> {
