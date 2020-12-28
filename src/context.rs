@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::blog::{get_org_blog, OrgBlog, OrgModeHtml};
 
 /// BLOG_ROOT is the relative path to blog
-pub static BLOG_ROOT: &'static str = "blog/";
+pub static BLOG_ROOT: &str = "blog/";
 
 /// SiteContextKv represents all key-value variables used in
 /// this project.
@@ -99,8 +99,7 @@ pub fn get_base_context(nav_href_uri: &str) -> SiteContext<'_> {
 }
 
 pub fn init_context() {
-    let foo = get_base_context("/");
-    println!("{}", foo.blog.blog_files.len());
+    println!("{}", get_base_context("/").blog.blog_files.len());
 }
 
 macro_rules! template_map(

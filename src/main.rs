@@ -7,7 +7,6 @@ extern crate rocket;
 extern crate serde_derive;
 #[macro_use]
 extern crate log;
-use simple_logger;
 
 #[cfg(test)]
 mod tests;
@@ -21,7 +20,10 @@ use context::init_context;
 use server::start_server;
 
 fn main() {
-    simple_logger::init_with_level(log::Level::Info).unwrap();
+    simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
+        .init()
+        .unwrap();
     init_context();
     start_server().launch();
 }

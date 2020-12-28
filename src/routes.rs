@@ -11,16 +11,17 @@ use rocket::Route;
 
 // And just like that, months and months later,
 // it just works.
-macro_rules! simple_route {
-    ($name:ident, $route:literal, $title:literal) => {
-        #[get($route)]
-        fn $name() -> Template {
-            let mut context = get_base_context($route);
-            context.kv.insert("title".to_owned(), $title.to_owned());
-            Template::render(get_template($route), context)
-        }
-    };
-}
+// Not used yet though lol - not sure how this got uncommented.
+// macro_rules! simple_route {
+//     ($name:ident, $route:literal, $title:literal) => {
+//         #[get($route)]
+//         fn $name() -> Template {
+//             let mut context = get_base_context($route);
+//             context.kv.insert("title".to_owned(), $title.to_owned());
+//             Template::render(get_template($route), context)
+//         }
+//     };
+// }
 
 #[get("/")]
 fn index() -> Template {
@@ -64,13 +65,12 @@ fn github() -> Template {
 // simple_route! {github, "/github", "github"}
 
 #[get("/robots.txt")]
-fn robots_txt() -> std::io::Result<&'static str> {
-    let robots_txt = r#"
+fn robots_txt() -> &'static str {
+    r#"
 # robots.txt
 User-agent: *
 Disallow:
-"#;
-    Ok(robots_txt)
+"#
 }
 
 #[derive(Responder)]

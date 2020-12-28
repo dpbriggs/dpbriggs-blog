@@ -1,6 +1,3 @@
-use chrono;
-use select;
-
 use chrono::NaiveDate;
 use select::document::Document;
 use select::predicate::{Attr, Class, Name};
