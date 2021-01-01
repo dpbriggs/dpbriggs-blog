@@ -1,0 +1,736 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2021-01-01 Fri 17:28 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Adding FFI Support in x7</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="David Briggs" />
+<script type="text/javascript">
+// @license magnet:?xt=urn:btih:e95b018ef3580986a04669f1b5879592219e2a7a&dn=public-domain.txt Public Domain
+<!--/*--><![CDATA[/*><!--*/
+     function CodeHighlightOn(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(null != target) {
+         elem.classList.add("code-highlighted");
+         target.classList.add("code-highlighted");
+       }
+     }
+     function CodeHighlightOff(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(null != target) {
+         elem.classList.remove("code-highlighted");
+         target.classList.remove("code-highlighted");
+       }
+     }
+    /*]]>*///-->
+// @license-end
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Adding FFI Support in x7</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orga64ec5c">Adding FFI Support in x7</a>
+<ul>
+<li><a href="#org1b01cf1">An Overview of x7's internal structure</a></li>
+<li><a href="#orgc23928f">Motivating Example</a></li>
+<li><a href="#orgaba6b30">What should x7's FFI interface support?</a></li>
+<li><a href="#org45078a5">Reasoning about Foreign Data</a>
+<ul>
+<li><a href="#org379091f">Example implementation of ForeignData</a></li>
+</ul>
+</li>
+<li><a href="#orgef9a258">Implementing ForeignData for common types</a></li>
+<li><a href="#orgfabb7a6">Foreign Functions: The IntoX7Function Trait</a></li>
+<li><a href="#org63ef521">The X7Interpreter</a></li>
+<li><a href="#org72dbe0d">Conclusion</a></li>
+<li><a href="#orgf5709db">Appendix: Variadics</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+<span class="timestamp-wrapper"><span class="timestamp">&lt;2020-12-31 Thu&gt;</span></span>
+</p>
+
+
+<div id="outline-container-orga64ec5c" class="outline-2">
+<h2 id="orga64ec5c">Adding FFI Support in x7</h2>
+<div class="outline-text-2" id="text-orga64ec5c">
+<p>
+FFI, or Foreign Function Interface, is mechanism whereby different programming languages can interact with each other in a direct way. <a href="https://github.com/dpbriggs/x7">x7</a> is a lisp I made to explore language design and interpreters. Here's the hello world for it:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #DCDCCC;">(</span>println <span style="color: #D9A0A0;">"Hello World!"</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+I want other rust programs to be able to <b>conveniently</b> embed a x7 interpreter, pass data back
+and forth, and have x7 call foreign functions. Here's a TLDR example:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Some necessary imports</span>
+<span style="color: #FDECBC; font-weight: bold;">use</span> <span style="color: #CCF8CC;">x7</span>::<span style="color: #CCF8CC;">ffi</span>::<span style="color: #DCDCCC;">{</span><span style="color: #89C5C8;">ForeignData</span>, <span style="color: #89C5C8;">IntoX7Function</span>, <span style="color: #89C5C8;">X7Interpreter</span><span style="color: #DCDCCC;">}</span>;
+
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">A foreign function we want to add to x7.</span>
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Note: It's typed in u32, which x7 does _not_ understand.</span>
+<span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">my_foreign_function</span><span style="color: #DCDCCC;">(</span><span style="color: #ECBC9C;">a</span>: <span style="color: #89C5C8;">u32</span>, <span style="color: #ECBC9C;">b</span>: <span style="color: #89C5C8;">u32</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">u32</span> <span style="color: #DCDCCC;">{</span>
+    a + b
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Make an interpreter instance.</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">interpreter</span> = <span style="color: #89C5C8;">X7Interpreter</span>::new<span style="color: #CCF8CC;">()</span>;
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Add my function to the interpreter</span>
+    interpreter.add_function<span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"my-ff"</span>, my_foreign_function.to_x7_fn<span style="color: #DDCC9C;">()</span><span style="color: #CCF8CC;">)</span>;
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Run an x7 program using my function</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">res</span>: <span style="color: #89C5C8;">u32</span> = interpreter.run_program<span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"(my-ff 1 2)"</span><span style="color: #CCF8CC;">)</span>.unwrap<span style="color: #CCF8CC;">()</span>;
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Verify the results</span>
+    <span style="color: #9CC7FB;">assert_eq!</span><span style="color: #CCF8CC;">(</span>res, <span style="color: #CCF8CC;">3</span><span style="color: #CCF8CC;">)</span>;
+<span style="color: #DCDCCC;">}</span>
+
+</pre>
+</div>
+
+<p>
+This blog post will detail the inner workings of making FFI convenient in x7.
+</p>
+</div>
+
+<div id="outline-container-org1b01cf1" class="outline-3">
+<h3 id="org1b01cf1">An Overview of x7's internal structure</h3>
+<div class="outline-text-3" id="text-org1b01cf1">
+<p>
+To better understand how x7's FFI system works, we'll need to quickly cover how x7 represents
+types internally. All types, from numbers to lists to functions are instances of the <code>Expr</code> enum:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">enum</span> <span style="color: #89C5C8;">Expr</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Num</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Symbol</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Symbol</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">List</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Function</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Function</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">Nil</span>,
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">... some elided variants</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Fundamental to the FFI system is being able to convert foreign data types like <code>u64</code> to a sensible
+<code>Expr</code> variant like <code>Expr::Num</code>. x7 <span class="underline">only</span> understands <code>Expr</code>, and it's impossible to use any other type.
+Throughout this article I will refer to non-Expr types as foreign, as they really are.
+</p>
+
+<p>
+The next fundamental concern is converting foreign functions to x7's <code>Function</code> struct. The
+struct contains a few useful things, like the actual function pointer that actually does the work,
+and some auxiliary information like minimum number of arguments and whether to evaluate arguments or not.
+</p>
+
+<p>
+In subsequent sections of the article we'll cover the rust traits responsible for the conversion.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgc23928f" class="outline-3">
+<h3 id="orgc23928f">Motivating Example</h3>
+<div class="outline-text-3" id="text-orgc23928f">
+<p>
+My original motivation was embedding x7 as a scripting language in the database <code>redis-oxide</code>.
+</p>
+
+<p>
+In particular, I wanted this to be possible:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">basic x7 program, running inside of redis-oxide</span>
+<span style="color: #DCDCCC;">(</span>+ <span style="color: #D9A0A0;">"redis-oxide returned: "</span>
+   <span style="color: #CCF8CC;">(</span>redis <span style="color: #D9A0A0;">"get"</span> <span style="color: #D9A0A0;">"mykey"</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+That <code>redis</code> function is foreign, so as alluded to in the FFI example above, it operates
+on it's own foreign types. This implies that x7's FFI system will need to transparently and automatically convert between foreign types and it's own native type <code>Expr</code>.
+</p>
+
+<p>
+An implementation detail of the <code>redis-oxide</code> database is that it operates internally
+on the <code>RedisRefValue</code> type. So concretely we need a way to convert <code>"get"</code> and <code>"mykey"</code> into a
+<code>RedisRefValue</code>. On the other end, <code>redis-oxide</code> returns the same type after an operation,
+so we need to convert that to something <code>x7</code> understands (<code>Expr</code>), so it can operate on that.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgaba6b30" class="outline-3">
+<h3 id="orgaba6b30">What should x7's FFI interface support?</h3>
+<div class="outline-text-3" id="text-orgaba6b30">
+<p>
+At a minimum we need to support:
+</p>
+
+<ol class="org-ol">
+<li>A nice way to transparently operate on foreign data types.</li>
+<li>Foreign functions being typed in their native types, not x7's <code>Expr</code>.
+<ol class="org-ol">
+<li>If you've worked with other FFI systems, like Python's excellent <a href="https://docs.python.org/3/extending/extending.html">FFI system</a>,
+functions added to the interpreter are typed in <span class="underline">Python's</span> types, not the types of your program. This is fine, but not convenient as you need to manually convert python to your types and back.</li>
+</ol></li>
+<li>A nice way to construct and add these functions to the interpreter.</li>
+</ol>
+</div>
+</div>
+
+<div id="outline-container-org45078a5" class="outline-3">
+<h3 id="org45078a5">Reasoning about Foreign Data</h3>
+<div class="outline-text-3" id="text-org45078a5">
+<p>
+A fundamental concern of an FFI system is to reason about data passed between the foreign program and x7.
+In x7's FFI system, this behaviour is captured in the <code>ForeignData</code> trait:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">trait</span> <span style="color: #89C5C8;">ForeignData</span>
+<span style="color: #FDECBC; font-weight: bold;">where</span>
+    <span style="color: #ECBC9C;">Self</span>: <span style="color: #89C5C8;">Sized</span>,
+<span style="color: #DCDCCC;">{</span>
+    <span style="color: #ACD2AC;">/// Convert from Self to x7's Expr type.</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">to_x7</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span>, <span style="color: #89C5C8;">Box</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #89C5C8;">Error</span> + <span style="color: #89C5C8;">Send</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">&gt;</span>;
+    <span style="color: #ACD2AC;">/// Convert x7's Expr type to Self.</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">from_x7</span><span style="color: #CCF8CC;">(</span><span style="color: #ECBC9C;">expr</span>: &amp;<span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>, <span style="color: #89C5C8;">Box</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #89C5C8;">Error</span> + <span style="color: #89C5C8;">Send</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">&gt;</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+This trait encodes a fallible forward-and-backward mapping between some foreign type and x7's <code>Expr</code> type.
+If you're not familiar with <code>rust</code>, this adds methods to a type, and each operation
+either results in a <code>Result</code>, which encodes a success path, and a failure path of type <code>Box&lt;dyn Error + Send&gt;</code>.
+</p>
+
+<p>
+If the conversion fails for any reason, we try our best to type erase that error in terms
+of <code>Box&lt;dyn Error + Send&gt;</code>. This error trait object helps a lot with wrangling different error types
+into just one that we can reason about. That <code>Error</code> trait is the <code>std::error::Error</code> trait, which helps
+interoperability between different rust programs. The <code>Send</code> trait bound is required as
+our motivating example is <code>redis-oxide</code>, which requires that errors be sent between threads.
+There's creates some unfortunate boilerplate around handling errors, but thankfully it's only around twenty lines.
+</p>
+</div>
+
+<div id="outline-container-org379091f" class="outline-4">
+<h4 id="org379091f">Example implementation of ForeignData</h4>
+<div class="outline-text-4" id="text-org379091f">
+<p>
+The last few paragraphs sound fancy, but we're really doing something simple here: converting between two different types. We'll have some foreign data type called <code>MyData</code>,
+defined as a rust enum:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">derive</span><span style="color: #CCF8CC;">(</span><span style="color: #9CC7FB;">Debug</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">enum</span> <span style="color: #89C5C8;">MyData</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #89C5C8;">Int</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">u32</span><span style="color: #CCF8CC;">)</span>,
+    <span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">)</span>,
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+We'll also need a way to express errors as a <code>Box&lt;dyn Error + Send&gt;</code>, so we'll
+add a basic <code>MyError</code> type with some boilerplate:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">A struct to hold the error string</span>
+<span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">derive</span><span style="color: #CCF8CC;">(</span><span style="color: #9CC7FB;">Debug</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">MyError</span><span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">String</span><span style="color: #DCDCCC;">)</span>;
+
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Display is required for std::error::Error</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">fmt</span>::<span style="color: #89C5C8;">Display</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">MyError</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">fmt</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>, <span style="color: #ECBC9C;">f</span>: &amp;<span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">fmt</span>::<span style="color: #89C5C8;">Formatter</span><span style="color: #DDCC9C;">&lt;</span>'<span style="color: #ECBC9C;">_</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">fmt</span>::<span style="color: #89C5C8;">Result</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #DCDCCC; font-weight: bold;">write!</span><span style="color: #DDCC9C;">(</span>f, <span style="color: #D9A0A0;">"Error: </span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, <span style="color: #FDECBC; font-weight: bold;">self</span>.<span style="color: #CCF8CC;">0</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Actually implement std::Error::Error for MyError</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">error</span>::<span style="color: #89C5C8;">Error</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">MyError</span> <span style="color: #DCDCCC;">{}</span>
+
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">MyError</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">An easy way to construct this error</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">boxed</span><span style="color: #CCF8CC;">(</span><span style="color: #ECBC9C;">err</span>: <span style="color: #89C5C8;">String</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Box</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">error</span>::<span style="color: #89C5C8;">Error</span> + <span style="color: #89C5C8;">Send</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Box</span>::new<span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">MyError</span><span style="color: #A0EDF0;">(</span>err<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+This will help us return errors when someone for example tries to convert a x7 function
+into a <code>MyData</code>.
+</p>
+
+<p>
+Now that we have the boilerplate out of the way, we can implement <code>ForeignData</code> for <code>MyData</code>!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Necessary imports</span>
+<span style="color: #FDECBC; font-weight: bold;">use</span> <span style="color: #CCF8CC;">x7</span>::<span style="color: #CCF8CC;">ffi</span>::<span style="color: #DCDCCC;">{</span><span style="color: #89C5C8;">ExprHelper</span>, <span style="color: #89C5C8;">ForeignData</span><span style="color: #DCDCCC;">}</span>;
+<span style="color: #FDECBC; font-weight: bold;">use</span> <span style="color: #CCF8CC;">x7</span>::<span style="color: #CCF8CC;">symbols</span>::<span style="color: #89C5C8;">Expr</span>;
+
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">ForeignData implementation for MyData</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">ForeignData</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">MyData</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">to_x7</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span>, <span style="color: #89C5C8;">Box</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">error</span>::<span style="color: #89C5C8;">Error</span> + <span style="color: #89C5C8;">Send</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">The forward direction is actually infallible</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">res</span> = <span style="color: #FDECBC; font-weight: bold;">match</span> <span style="color: #FDECBC; font-weight: bold;">self</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #89C5C8;">MyData</span>::<span style="color: #89C5C8;">Int</span><span style="color: #A0EDF0;">(</span>i<span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Num</span><span style="color: #A0EDF0;">(</span><span style="color: #ACD2AC;">(</span>*i<span style="color: #ACD2AC;">)</span>.into<span style="color: #ACD2AC;">()</span><span style="color: #A0EDF0;">)</span>,
+            <span style="color: #89C5C8;">MyData</span>::<span style="color: #89C5C8;">String</span><span style="color: #A0EDF0;">(</span>s<span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">String</span><span style="color: #A0EDF0;">(</span>s.clone<span style="color: #ACD2AC;">()</span><span style="color: #A0EDF0;">)</span>,
+        <span style="color: #DDCC9C;">}</span>;
+        <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span>res<span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">from_x7</span><span style="color: #CCF8CC;">(</span><span style="color: #ECBC9C;">expr</span>: &amp;<span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>, <span style="color: #89C5C8;">Box</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #CCF8CC;">std</span>::<span style="color: #CCF8CC;">error</span>::<span style="color: #89C5C8;">Error</span> + <span style="color: #89C5C8;">Send</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">The backward direction _is_ fallible.</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">e.g. There's no way to express x7 functions in terms of MyData</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">res</span> = <span style="color: #FDECBC; font-weight: bold;">match</span> expr <span style="color: #DDCC9C;">{</span>
+            <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Num</span><span style="color: #A0EDF0;">(</span>i<span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #89C5C8;">MyData</span>::<span style="color: #89C5C8;">Int</span><span style="color: #A0EDF0;">(</span>i.to_u64<span style="color: #ACD2AC;">()</span><span style="color: #DCDCCC; font-weight: bold;">?</span><span style="color: #A0EDF0;">)</span>, <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">to_u64 is a ExprHelper method</span>
+            <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">String</span><span style="color: #A0EDF0;">(</span>s<span style="color: #A0EDF0;">)</span> =&gt; <span style="color: #89C5C8;">MyData</span>::<span style="color: #89C5C8;">String</span><span style="color: #A0EDF0;">(</span>s.clone<span style="color: #ACD2AC;">()</span><span style="color: #A0EDF0;">)</span>,
+            unknown_type =&gt; <span style="color: #A0EDF0;">{</span>
+                <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">err_msg</span> = <span style="color: #DCDCCC; font-weight: bold;">format!</span><span style="color: #ACD2AC;">(</span><span style="color: #D9A0A0;">"</span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;"> cannot be converted to MyData"</span>, unknown_type<span style="color: #ACD2AC;">)</span>;
+                <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Err</span><span style="color: #ACD2AC;">(</span><span style="color: #89C5C8;">MyError</span>::boxed<span style="color: #9CC7FB;">(</span>err_msg<span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span>;
+            <span style="color: #A0EDF0;">}</span>
+        <span style="color: #DDCC9C;">}</span>;
+        <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span>res<span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Relatively speaking that's a lot of code for a simple conversion, but we can 
+leverage the <code>ForeignData</code> trait to make some cool things for our FFI.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgef9a258" class="outline-3">
+<h3 id="orgef9a258">Implementing ForeignData for common types</h3>
+<div class="outline-text-3" id="text-orgef9a258">
+<p>
+To maximize convenience and skirt around rust's orphan rule, we'll provide ForeignData implementations
+for common types like <code>String</code> and <code>u64</code>. There's a lot of these implementations in the <code>ffi.rs</code> file in x7.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">ForeignData</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">u64</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">to_x7</span><span style="color: #CCF8CC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Expr</span>, <span style="color: #89C5C8;">Box</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #89C5C8;">Error</span> + <span style="color: #89C5C8;">Send</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">Ok</span><span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Num</span><span style="color: #A0EDF0;">(</span><span style="color: #ACD2AC;">(</span>*<span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #ACD2AC;">)</span>.into<span style="color: #ACD2AC;">()</span><span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">from_x7</span><span style="color: #CCF8CC;">(</span><span style="color: #ECBC9C;">expr</span>: &amp;<span style="color: #89C5C8;">Expr</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">Self</span>, <span style="color: #89C5C8;">Box</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #89C5C8;">Error</span> + <span style="color: #89C5C8;">Send</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        expr.to_u64<span style="color: #DDCC9C;">()</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+This will allow users to make functions using common rust types, and not worry about the details.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgfabb7a6" class="outline-3">
+<h3 id="orgfabb7a6">Foreign Functions: The IntoX7Function Trait</h3>
+<div class="outline-text-3" id="text-orgfabb7a6">
+<p>
+Now that we can reason about foreign data, we want a way to convert functions written in terms
+of foreign data types into something x7 can use. We'll use a technique known as extension traits to add a
+<code>.to_x7_fn()</code> method to functions. We'll ignore variadic (any number of arguments) functions for
+now, and only focus on functions with a known number of arguments.
+</p>
+
+<p>
+The basic ingredients for a x7 function is:
+</p>
+
+<ol class="org-ol">
+<li>A <code>X7FunctionPtr</code>, the pointer to the x7 function, which has some serious restrictions.
+<ol class="org-ol">
+<li>The function has the shape <code>Fn(Vector&lt;Expr&gt;, &amp;SymbolTable) -&gt; LispResult&lt;Expr&gt;</code>.</li>
+<li>We require Sync + Send bounds to ensure thread safety (and make it compile).</li>
+</ol></li>
+<li>A minimum number of arguments.</li>
+<li>A symbol to represent the function (<code>my-ff</code>, etc).</li>
+</ol>
+
+<p>
+We can use some trait magic to automate the first two, by having a trait that takes <code>self</code> and
+and returns the minimum number of args, and the X7FunctionPtr:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">trait</span> <span style="color: #89C5C8;">IntoX7Function</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">Args</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">to_x7_fn</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">symbols</span>::<span style="color: #89C5C8;">X7FunctionPtr</span><span style="color: #CCF8CC;">)</span>;
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+An interesting part of this trait is the <code>&lt;Args, Out&gt;</code> types. We need those types to help differentiate our implementations
+of <code>IntoX7Function</code>, and support variadics later on. The general implementation concept for a function that takes <code>n</code> arguments is:
+</p>
+
+<ol class="org-ol">
+<li>Make an x7 function: <code>Fn(args: Vector&lt;Expr&gt;, _sym: &amp;SymbolTable) -&gt; LispResult&lt;Expr&gt;</code></li>
+<li>Verify that exactly <code>n</code> arguments are passed (<code>args.len()==n</code>).</li>
+<li>Convert each x7 <code>Expr</code> argument to the type we need with <code>ForeignData::from_x7()</code>.
+<ol class="org-ol">
+<li>Return a nice error message if that fails.</li>
+</ol></li>
+<li>Call the foreign function with those now-converted arguments.
+<ol class="org-ol">
+<li>Then capture and convert the function output with <code>Out::to_x7()</code> - x7 needs an <code>Expr</code>!</li>
+<li>Massage any errors into the error type x7 expects (<code>anyhow::Error</code>)</li>
+</ol></li>
+</ol>
+
+<p>
+With that in mind, here's what the two argument implementation looks like without comments:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">F</span>, <span style="color: #89C5C8;">A</span>, <span style="color: #89C5C8;">B</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">IntoX7Function</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">A</span>, <span style="color: #89C5C8;">B</span><span style="color: #CCF8CC;">)</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">F</span>
+<span style="color: #FDECBC; font-weight: bold;">where</span>
+    <span style="color: #ECBC9C;">A</span>: <span style="color: #89C5C8;">ForeignData</span>,
+    <span style="color: #ECBC9C;">B</span>: <span style="color: #89C5C8;">ForeignData</span>,
+    <span style="color: #ECBC9C;">Out</span>: <span style="color: #89C5C8;">ForeignData</span>,
+    <span style="color: #ECBC9C;">F</span>: <span style="color: #89C5C8;">Fn</span><span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">A</span>, <span style="color: #89C5C8;">B</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Out</span> + <span style="color: #89C5C8;">Sync</span> + <span style="color: #89C5C8;">Send</span> + '<span style="color: #FDECBC; font-weight: bold;">static</span>,
+<span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">to_x7_fn</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">symbols</span>::<span style="color: #89C5C8;">X7FunctionPtr</span><span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">f</span> = <span style="color: #FDECBC; font-weight: bold;">move</span> |<span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span>, <span style="color: #ECBC9C;">_sym</span>: &amp;<span style="color: #89C5C8;">SymbolTable</span>| <span style="color: #DDCC9C;">{</span>
+            <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #9CC7FB;">exact_len!</span><span style="color: #A0EDF0;">(</span>args, <span style="color: #CCF8CC;">2</span><span style="color: #A0EDF0;">)</span>;
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">a</span> = <span style="color: #9CC7FB;">convert_arg!</span><span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">A</span>, &amp;args<span style="color: #ACD2AC;">[</span><span style="color: #CCF8CC;">0</span><span style="color: #ACD2AC;">]</span><span style="color: #A0EDF0;">)</span>;
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">b</span> = <span style="color: #9CC7FB;">convert_arg!</span><span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">B</span>, &amp;args<span style="color: #ACD2AC;">[</span><span style="color: #CCF8CC;">1</span><span style="color: #ACD2AC;">]</span><span style="color: #A0EDF0;">)</span>;
+            <span style="color: #A0EDF0;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #A0EDF0;">)(</span>a, b<span style="color: #A0EDF0;">)</span>.to_x7<span style="color: #A0EDF0;">()</span>.map_err<span style="color: #A0EDF0;">(</span>|e| <span style="color: #9CC7FB;">anyhow!</span><span style="color: #ACD2AC;">(</span><span style="color: #D9A0A0;">"{:?}"</span>, e<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>
+        <span style="color: #DDCC9C;">}</span>;
+        <span style="color: #DDCC9C;">(</span><span style="color: #CCF8CC;">2</span>, <span style="color: #89C5C8;">Arc</span>::new<span style="color: #A0EDF0;">(</span>f<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And here's what it looks like with comments:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">We're working with a function with two arguments,</span>
+<span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">that returns a single output type Out.</span>
+<span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">F</span>, <span style="color: #89C5C8;">A</span>, <span style="color: #89C5C8;">B</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">IntoX7Function</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">A</span>, <span style="color: #89C5C8;">B</span><span style="color: #CCF8CC;">)</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">F</span>
+<span style="color: #FDECBC; font-weight: bold;">where</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">All inputs and outputs to this function require ForeignData</span>
+    <span style="color: #ECBC9C;">A</span>: <span style="color: #89C5C8;">ForeignData</span>,
+    <span style="color: #ECBC9C;">B</span>: <span style="color: #89C5C8;">ForeignData</span>,
+    <span style="color: #ECBC9C;">Out</span>: <span style="color: #89C5C8;">ForeignData</span>,
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">X7FunctionPtr requires Sync + Send, so we add that restriction to F</span>
+    <span style="color: #ECBC9C;">F</span>: <span style="color: #89C5C8;">Fn</span><span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">A</span>, <span style="color: #89C5C8;">B</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Out</span> + <span style="color: #89C5C8;">Sync</span> + <span style="color: #89C5C8;">Send</span> + '<span style="color: #FDECBC; font-weight: bold;">static</span>,
+<span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">to_x7_fn</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">symbols</span>::<span style="color: #89C5C8;">X7FunctionPtr</span><span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">This closure conforms to the shape X7FunctionPtr requires,</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">namely a function that takes a Vector&lt;Expr&gt; and a symbol table reference.</span>
+        <span style="color: #6C8C6C;">//</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">args: (&lt;ff-symbol&gt; 1 2) -&gt; vector![Expr::Num(1), Expr::Num(2)]; actual args passed</span>
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">_sym: A symbol table reference. Unused.</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">f</span> = <span style="color: #FDECBC; font-weight: bold;">move</span> |<span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span>, <span style="color: #ECBC9C;">_sym</span>: &amp;<span style="color: #89C5C8;">SymbolTable</span>| <span style="color: #DDCC9C;">{</span>
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">exact_len: macro to throw an error if args.len() != 2.</span>
+            <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #9CC7FB;">exact_len!</span><span style="color: #A0EDF0;">(</span>args, <span style="color: #CCF8CC;">2</span><span style="color: #A0EDF0;">)</span>;
+            <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">convert_arg: macro that calls A::from_x7(&amp;args[0]) and return a nice error if that fails</span>
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">a</span> = <span style="color: #9CC7FB;">convert_arg!</span><span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">A</span>, &amp;args<span style="color: #ACD2AC;">[</span><span style="color: #CCF8CC;">0</span><span style="color: #ACD2AC;">]</span><span style="color: #A0EDF0;">)</span>;
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">b</span> = <span style="color: #9CC7FB;">convert_arg!</span><span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">B</span>, &amp;args<span style="color: #ACD2AC;">[</span><span style="color: #CCF8CC;">1</span><span style="color: #ACD2AC;">]</span><span style="color: #A0EDF0;">)</span>;
+            <span style="color: #A0EDF0;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #A0EDF0;">)(</span>a, b<span style="color: #A0EDF0;">)</span> <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">(self)(a,b) calls the foreign function with args a, b</span>
+                .to_x7<span style="color: #A0EDF0;">()</span> <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">convert the output to an x7 Expr</span>
+                .map_err<span style="color: #A0EDF0;">(</span>|e| <span style="color: #9CC7FB;">anyhow!</span><span style="color: #ACD2AC;">(</span><span style="color: #D9A0A0;">"{:?}"</span>, e<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span> <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">massage error type to x7's error type (anyhow)</span>
+        <span style="color: #DDCC9C;">}</span>;
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Finally, return a tuple of minimum args + our function</span>
+        <span style="color: #DDCC9C;">(</span><span style="color: #CCF8CC;">2</span>, <span style="color: #89C5C8;">Arc</span>::new<span style="color: #A0EDF0;">(</span>f<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+x7's FFI system contains similar implementations for functions that take one args to five args.
+The appendix will cover variadic functions. All of this gives us the power to do:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">my_ff</span> = |<span style="color: #ECBC9C;">a</span>: <span style="color: #89C5C8;">u64</span>, <span style="color: #ECBC9C;">b</span>: <span style="color: #89C5C8;">u64</span>| a + b; 
+<span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">my_ff_x7</span> = my_ff.to_x7_fn<span style="color: #DCDCCC;">()</span>;
+</pre>
+</div>
+
+<p>
+Which is great, but now we need a way to make a x7 interpreter instance and actually add that <code>my_ff</code> function to it.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org63ef521" class="outline-3">
+<h3 id="org63ef521">The X7Interpreter</h3>
+<div class="outline-text-3" id="text-org63ef521">
+<p>
+This part is thankfully much simpler than previous sections. We only need a struct holding a <code>SymbolTable</code> and a way to run programs on it.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #9CC7FB;">#</span><span style="color: #DCDCCC;">[</span><span style="color: #9CC7FB;">derive</span><span style="color: #CCF8CC;">(</span><span style="color: #9CC7FB;">Clone</span><span style="color: #CCF8CC;">)</span><span style="color: #DCDCCC;">]</span>
+<span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">X7Interpreter</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ECBC9C;">symbol_table</span>: <span style="color: #89C5C8;">SymbolTable</span>,
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+And a way to make a new one:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">X7Interpreter</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ACD2AC;">/// Make a new interpreter instance.</span>
+    <span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">new</span><span style="color: #CCF8CC;">()</span> -&gt; <span style="color: #89C5C8;">Self</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #89C5C8;">X7Interpreter</span> <span style="color: #DDCC9C;">{</span>
+            <span style="color: #ECBC9C;">symbol_table</span>: <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">stdlib</span>::create_stdlib_symbol_table_no_cli<span style="color: #A0EDF0;">()</span>,
+        <span style="color: #DDCC9C;">}</span>
+    <span style="color: #CCF8CC;">}</span>
+   <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">elided...</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Finally, we need a way to run programs. We'll just take the program string as a <code>&amp;str</code>, and call the usual lisp function of <code>read</code> and <code>eval</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">X7Interpreter</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ACD2AC;">/// Run a x7 program.</span>
+    <span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">run_program</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #ECBC9C;">T</span>: '<span style="color: #FDECBC; font-weight: bold;">static</span> + <span style="color: #89C5C8;">ForeignData</span><span style="color: #CCF8CC;">&gt;(</span>
+        &amp;<span style="color: #FDECBC; font-weight: bold;">self</span>,
+        <span style="color: #ECBC9C;">program</span>: &amp;<span style="color: #89C5C8;">str</span>,
+    <span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Result</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">T</span>, <span style="color: #89C5C8;">Box</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #FDECBC; font-weight: bold;">dyn</span> <span style="color: #89C5C8;">Error</span> + <span style="color: #89C5C8;">Send</span><span style="color: #DDCC9C;">&gt;</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #FDECBC; font-weight: bold;">mut</span> <span style="color: #ECBC9C;">last_expr</span> = <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Nil</span>;
+        <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #ECBC9C;">expr</span> <span style="color: #FDECBC; font-weight: bold;">in</span> read<span style="color: #DDCC9C;">(</span>program<span style="color: #DDCC9C;">)</span> <span style="color: #DDCC9C;">{</span>
+            last_expr = expr
+                .and_then<span style="color: #A0EDF0;">(</span>|expr| expr.eval<span style="color: #ACD2AC;">(</span>&amp;<span style="color: #FDECBC; font-weight: bold;">self</span>.symbol_table<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>
+                .map_err<span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">ErrorBridge</span>::new<span style="color: #A0EDF0;">)</span><span style="color: #DCDCCC; font-weight: bold;">?</span>;
+        <span style="color: #DDCC9C;">}</span>
+        <span style="color: #89C5C8;">T</span>::from_x7<span style="color: #DDCC9C;">(</span>&amp;last_expr<span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+This function parses the input (<code>read</code>), and then for every expression in the program call <code>eval</code> and return errors as necessary.
+We need to return something, so we default to <code>Expr::Nil</code> and return the last expression. The user needs to specify the output type <code>T</code>,
+as we want to actually return something. It's now possible to do:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">interpreter</span> = <span style="color: #89C5C8;">X7Interpreter</span>::new<span style="color: #CCF8CC;">()</span>;
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">output</span> = interpreter.run_program::<span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">u64</span><span style="color: #CCF8CC;">&gt;(</span><span style="color: #D9A0A0;">"(+ 1 1)"</span><span style="color: #CCF8CC;">)</span>.unwrap<span style="color: #CCF8CC;">()</span>;
+    <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"output: </span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, output<span style="color: #CCF8CC;">)</span>;
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">prints "output: 2"</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Finally, we need a way to add functions to the interpreter. This is also straightforward thanks to <code>IntoX7Function</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span> <span style="color: #89C5C8;">X7Interpreter</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #ACD2AC;">/// Add a function to the interpreter under the symbol `function_symbol`</span>
+    <span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">add_function</span><span style="color: #CCF8CC;">(</span>
+        &amp;<span style="color: #FDECBC; font-weight: bold;">self</span>,
+        <span style="color: #ECBC9C;">function_symbol</span>: &amp;'<span style="color: #FDECBC; font-weight: bold;">static</span> <span style="color: #89C5C8;">str</span>,
+        <span style="color: #ECBC9C;">fn_tuple</span>: <span style="color: #DDCC9C;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">symbols</span>::<span style="color: #89C5C8;">X7FunctionPtr</span><span style="color: #DDCC9C;">)</span>,
+    <span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #DDCC9C;">(</span>minimum_args, fn_ptr<span style="color: #DDCC9C;">)</span> = fn_tuple;
+        <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">The `true` at the end tells x7 to evaluate arguments passed in.</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">f</span> = <span style="color: #89C5C8;">Function</span>::new<span style="color: #DDCC9C;">(</span>function_symbol.into<span style="color: #A0EDF0;">()</span>, minimum_args, fn_ptr, <span style="color: #FDECBC; font-weight: bold;">true</span><span style="color: #DDCC9C;">)</span>;
+        <span style="color: #FDECBC; font-weight: bold;">self</span>.symbol_table
+            .add_symbol<span style="color: #DDCC9C;">(</span>function_symbol, <span style="color: #89C5C8;">Expr</span>::<span style="color: #89C5C8;">Function</span><span style="color: #A0EDF0;">(</span>f<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>;
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+All we're doing is making a new <code>Function</code> struct instance, and adding the function to the interpreter with under the symbol <code>function_symbol</code>.
+Here's an example:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">main</span><span style="color: #DCDCCC;">()</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">interpreter</span> = <span style="color: #89C5C8;">X7Interpreter</span>::new<span style="color: #CCF8CC;">()</span>;
+
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">Make and add the function to x7 under the symbol my-ff</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">my_ff</span> = |<span style="color: #ECBC9C;">a</span>: <span style="color: #89C5C8;">u64</span>, <span style="color: #ECBC9C;">b</span>: <span style="color: #89C5C8;">u64</span>| a + b;
+    interpreter.add_function<span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"my-ff"</span>, my_ff.to_x7_fn<span style="color: #DDCC9C;">()</span><span style="color: #CCF8CC;">)</span>;
+
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">output</span> = interpreter.run_program::<span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">u64</span><span style="color: #CCF8CC;">&gt;(</span><span style="color: #D9A0A0;">"(my-ff 1 1)"</span><span style="color: #CCF8CC;">)</span>.unwrap<span style="color: #CCF8CC;">()</span>;
+    <span style="color: #DCDCCC; font-weight: bold;">println!</span><span style="color: #CCF8CC;">(</span><span style="color: #D9A0A0;">"output: </span><span style="color: #D9A0A0; font-style: italic;">{}</span><span style="color: #D9A0A0;">"</span>, output<span style="color: #CCF8CC;">)</span>; <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">prints "output: 2"</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Interestingly, we can also see our careful handling of errors has paid off. The following x7 program:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #DCDCCC;">(</span>my-ff <span style="color: #CCF8CC;">1</span> <span style="color: #D9A0A0;">"i am a string"</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Fails with this error message, as <code>my-ff</code> expects a <code>u64</code> not a string:
+</p>
+
+<pre class="example" id="orga9191b2">
+Error in Fn&lt;my-ff, 2, [ ]&gt;, with args (1 "i am a string")
+
+Caused by:
+    Error: Expected num, but got type 'str': "i am a string"
+
+    Caused by:
+        BadTypes
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org72dbe0d" class="outline-3">
+<h3 id="org72dbe0d">Conclusion</h3>
+<div class="outline-text-3" id="text-org72dbe0d">
+<p>
+The x7 FFI system was very interesting for me to figure out, and this is what came out.
+I hope you enjoyed the article - it's certainly more code and concept heavy than previous articles.
+</p>
+
+<p>
+Overall I think there's some room for improvement in the FFI system, but it's powerful and convenient enough
+to be embedded into <code>redis-oxide</code>, so I am content for now.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgf5709db" class="outline-3">
+<h3 id="orgf5709db">Appendix: Variadics</h3>
+<div class="outline-text-3" id="text-orgf5709db">
+<p>
+Thanks to the signature of <code>IntoX7Function</code>, we can add a type <code>Variadic</code> and implement <code>IntoX7Function</code> in terms of it.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">struct</span> <span style="color: #89C5C8;">Variadic</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">T</span><span style="color: #DCDCCC;">&gt;(</span><span style="color: #89C5C8;">Vec</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">T</span><span style="color: #CCF8CC;">&gt;</span><span style="color: #DCDCCC;">)</span>;
+
+<span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">T</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">Variadic</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">T</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">pub</span> <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">to_vec</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #89C5C8;">Vec</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">T</span><span style="color: #CCF8CC;">&gt;</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">self</span>.<span style="color: #CCF8CC;">0</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+Note: The underlying <code>Vec&lt;T&gt;</code> forces us to use the single type for every variadic argument.
+This isn't necessary a big deal, but it is something to keep in mind.
+</p>
+
+<p>
+We now implement <code>IntoX7Function</code> in terms of <code>Variadic</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">impl</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">F</span>, <span style="color: #ECBC9C;">T</span>: <span style="color: #89C5C8;">ForeignData</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #89C5C8;">IntoX7Function</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">Variadic</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">T</span><span style="color: #DDCC9C;">&gt;</span>,<span style="color: #CCF8CC;">)</span>, <span style="color: #89C5C8;">Out</span><span style="color: #DCDCCC;">&gt;</span> <span style="color: #FDECBC; font-weight: bold;">for</span> <span style="color: #89C5C8;">F</span>
+<span style="color: #FDECBC; font-weight: bold;">where</span>
+    <span style="color: #ECBC9C;">T</span>: <span style="color: #89C5C8;">ForeignData</span>,
+    <span style="color: #ECBC9C;">Out</span>: <span style="color: #89C5C8;">ForeignData</span>,
+    <span style="color: #ECBC9C;">F</span>: <span style="color: #89C5C8;">Fn</span><span style="color: #DCDCCC;">(</span><span style="color: #89C5C8;">Variadic</span><span style="color: #CCF8CC;">&lt;</span><span style="color: #89C5C8;">T</span><span style="color: #CCF8CC;">&gt;</span><span style="color: #DCDCCC;">)</span> -&gt; <span style="color: #89C5C8;">Out</span> + <span style="color: #89C5C8;">Sync</span> + <span style="color: #89C5C8;">Send</span> + '<span style="color: #FDECBC; font-weight: bold;">static</span>,
+<span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">fn</span> <span style="color: #A0EDF0;">to_x7_fn</span><span style="color: #CCF8CC;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #CCF8CC;">)</span> -&gt; <span style="color: #CCF8CC;">(</span><span style="color: #89C5C8;">usize</span>, <span style="color: #FDECBC; font-weight: bold;">crate</span>::<span style="color: #CCF8CC;">symbols</span>::<span style="color: #89C5C8;">X7FunctionPtr</span><span style="color: #CCF8CC;">)</span> <span style="color: #CCF8CC;">{</span>
+        <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">f</span> = <span style="color: #FDECBC; font-weight: bold;">move</span> |<span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Vector</span><span style="color: #DDCC9C;">&lt;</span><span style="color: #89C5C8;">Expr</span><span style="color: #DDCC9C;">&gt;</span>, <span style="color: #ECBC9C;">_sym</span>: &amp;<span style="color: #89C5C8;">SymbolTable</span>| <span style="color: #DDCC9C;">{</span>
+            <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">args</span> = <span style="color: #FDECBC; font-weight: bold;">match</span> args.iter<span style="color: #A0EDF0;">()</span>.map<span style="color: #A0EDF0;">(</span><span style="color: #89C5C8;">T</span>::from_x7<span style="color: #A0EDF0;">)</span>.collect::<span style="color: #A0EDF0;">&lt;</span><span style="color: #89C5C8;">Result</span><span style="color: #ACD2AC;">&lt;</span><span style="color: #89C5C8;">Vec</span><span style="color: #9CC7FB;">&lt;</span>_<span style="color: #9CC7FB;">&gt;</span>, _<span style="color: #ACD2AC;">&gt;</span><span style="color: #A0EDF0;">&gt;()</span> <span style="color: #A0EDF0;">{</span>
+                <span style="color: #89C5C8;">Ok</span><span style="color: #ACD2AC;">(</span>v<span style="color: #ACD2AC;">)</span> =&gt; v,
+                <span style="color: #89C5C8;">Err</span><span style="color: #ACD2AC;">(</span>e<span style="color: #ACD2AC;">)</span> =&gt; <span style="color: #FDECBC; font-weight: bold;">return</span> <span style="color: #89C5C8;">Err</span><span style="color: #ACD2AC;">(</span><span style="color: #9CC7FB;">anyhow!</span><span style="color: #9CC7FB;">(</span><span style="color: #D9A0A0;">"{:?}"</span>, e<span style="color: #9CC7FB;">)</span><span style="color: #ACD2AC;">)</span>,
+            <span style="color: #A0EDF0;">}</span>;
+            <span style="color: #A0EDF0;">(</span><span style="color: #FDECBC; font-weight: bold;">self</span><span style="color: #A0EDF0;">)(</span><span style="color: #89C5C8;">Variadic</span><span style="color: #ACD2AC;">(</span>args<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>
+                .to_x7<span style="color: #A0EDF0;">()</span>
+                .map_err<span style="color: #A0EDF0;">(</span>|e| <span style="color: #9CC7FB;">anyhow!</span><span style="color: #ACD2AC;">(</span><span style="color: #D9A0A0;">"{:?}"</span>, e<span style="color: #ACD2AC;">)</span><span style="color: #A0EDF0;">)</span>
+        <span style="color: #DDCC9C;">}</span>;
+        <span style="color: #DDCC9C;">(</span><span style="color: #CCF8CC;">1</span>, <span style="color: #89C5C8;">Arc</span>::new<span style="color: #A0EDF0;">(</span>f<span style="color: #A0EDF0;">)</span><span style="color: #DDCC9C;">)</span>
+    <span style="color: #CCF8CC;">}</span>
+<span style="color: #DCDCCC;">}</span>
+</pre>
+</div>
+
+<p>
+For interest, this is what using <code>Variadic</code> in redis-oxide looks like:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-rust"><span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">send_fn</span> = <span style="color: #FDECBC; font-weight: bold;">move</span> |<span style="color: #ECBC9C;">args</span>: <span style="color: #89C5C8;">Variadic</span><span style="color: #DCDCCC;">&lt;</span><span style="color: #89C5C8;">RedisValueRef</span><span style="color: #DCDCCC;">&gt;</span>| <span style="color: #DCDCCC;">{</span>
+    <span style="color: #FDECBC; font-weight: bold;">let</span> <span style="color: #ECBC9C;">args</span> = args.to_vec<span style="color: #CCF8CC;">()</span>;
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">... use args as a vec ...</span>
+    <span style="color: #6C8C6C;">// </span><span style="color: #8CAC8C;">... implementation details coming in future article ..</span>
+<span style="color: #DCDCCC;">}</span>;
+<span style="color: #FDECBC; font-weight: bold;">self</span>.interpreter.add_function<span style="color: #DCDCCC;">(</span><span style="color: #D9A0A0;">"redis"</span>, send_fn.to_x7_fn<span style="color: #CCF8CC;">()</span><span style="color: #DCDCCC;">)</span>;
+</pre>
+</div>
+
+<p>
+This variadic FFI interface allows us to provide a <span class="underline">fully featured</span> redis-oxide API in about 20 lines of code,
+as commands are converted directly into the internal representation for command processing:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-lisp"><span style="color: #6C8C6C;">;; </span><span style="color: #8CAC8C;">No special API code! Directly converted and passed to the command processor</span>
+<span style="color: #DCDCCC;">(</span>redis <span style="color: #D9A0A0;">"mset"</span> <span style="color: #D9A0A0;">"key1"</span> <span style="color: #D9A0A0;">"value1"</span> <span style="color: #D9A0A0;">"key2"</span> <span style="color: #D9A0A0;">"value2"</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>redis <span style="color: #D9A0A0;">"lpush"</span> <span style="color: #D9A0A0;">"list-key"</span> <span style="color: #D9A0A0;">"value1"</span> <span style="color: #D9A0A0;">"value2"</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: David Briggs</p>
+<p class="date">Created: 2021-01-01 Fri 17:28</p>
+<p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,510 @@
+# -*- find-file-hook: make-blogging-mode -*-
+#+AUTHOR: David Briggs
+#+TITLE: Adding FFI Support in x7
+#+OPTIONS: html-style:nil num:nil ^:nil
+<2020-12-31 Thu>
+#+ATTR_HTML: target="_blank"
+
+
+* Adding FFI Support in x7
+
+FFI, or Foreign Function Interface, is mechanism whereby different programming languages can interact with each other in a direct way. [[https://github.com/dpbriggs/x7][x7]] is a lisp I made to explore language design and interpreters. Here's the hello world for it:
+
+#+begin_src lisp
+(println "Hello World!")
+#+end_src
+
+I want other rust programs to be able to *conveniently* embed a x7 interpreter, pass data back
+and forth, and have x7 call foreign functions. Here's a TLDR example:
+
+#+begin_src rust
+  // Some necessary imports
+  use x7::ffi::{ForeignData, IntoX7Function, X7Interpreter};
+
+  // A foreign function we want to add to x7.
+  // Note: It's typed in u32, which x7 does _not_ understand.
+  fn my_foreign_function(a: u32, b: u32) -> u32 {
+      a + b
+  }
+
+  fn main() {
+      // Make an interpreter instance.
+      let interpreter = X7Interpreter::new();
+      // Add my function to the interpreter
+      interpreter.add_function("my-ff", my_foreign_function.to_x7_fn());
+      // Run an x7 program using my function
+      let res: u32 = interpreter.run_program("(my-ff 1 2)").unwrap();
+      // Verify the results
+      assert_eq!(res, 3);
+  }
+
+#+end_src
+
+This blog post will detail the inner workings of making FFI convenient in x7.
+
+** An Overview of x7's internal structure
+
+To better understand how x7's FFI system works, we'll need to quickly cover how x7 represents
+types internally. All types, from numbers to lists to functions are instances of the =Expr= enum:
+
+#+begin_src rust
+  pub enum Expr {
+      Num(Num),
+      String(String),
+      Symbol(Symbol),
+      List(Vector<Expr>),
+      Function(Function),
+      Nil,
+      // ... some elided variants
+  }
+#+end_src
+
+Fundamental to the FFI system is being able to convert foreign data types like =u64= to a sensible
+=Expr= variant like =Expr::Num=. x7 _only_ understands =Expr=, and it's impossible to use any other type.
+Throughout this article I will refer to non-Expr types as foreign, as they really are.
+
+The next fundamental concern is converting foreign functions to x7's =Function= struct. The
+struct contains a few useful things, like the actual function pointer that actually does the work,
+and some auxiliary information like minimum number of arguments and whether to evaluate arguments or not.
+
+In subsequent sections of the article we'll cover the rust traits responsible for the conversion.
+
+** Motivating Example
+
+My original motivation was embedding x7 as a scripting language in the database =redis-oxide=.
+
+In particular, I wanted this to be possible:
+
+#+begin_src lisp
+  ;; basic x7 program, running inside of redis-oxide
+  (+ "redis-oxide returned: "
+     (redis "get" "mykey"))
+#+end_src
+
+That =redis= function is foreign, so as alluded to in the FFI example above, it operates
+on it's own foreign types. This implies that x7's FFI system will need to transparently and automatically convert between foreign types and it's own native type =Expr=.
+
+An implementation detail of the =redis-oxide= database is that it operates internally
+on the =RedisRefValue= type. So concretely we need a way to convert ="get"= and ="mykey"= into a
+=RedisRefValue=. On the other end, =redis-oxide= returns the same type after an operation,
+so we need to convert that to something =x7= understands (=Expr=), so it can operate on that.
+
+** What should x7's FFI interface support?
+
+At a minimum we need to support:
+
+1. A nice way to transparently operate on foreign data types.
+2. Foreign functions being typed in their native types, not x7's =Expr=.
+   1. If you've worked with other FFI systems, like Python's excellent [[https://docs.python.org/3/extending/extending.html][FFI system]],
+      functions added to the interpreter are typed in _Python's_ types, not the types of your program. This is fine, but not convenient as you need to manually convert python to your types and back.
+3. A nice way to construct and add these functions to the interpreter.
+
+** Reasoning about Foreign Data
+
+A fundamental concern of an FFI system is to reason about data passed between the foreign program and x7.
+In x7's FFI system, this behaviour is captured in the =ForeignData= trait:
+
+#+begin_src rust
+pub trait ForeignData
+where
+    Self: Sized,
+{
+    /// Convert from Self to x7's Expr type.
+    fn to_x7(&self) -> Result<Expr, Box<dyn Error + Send>>;
+    /// Convert x7's Expr type to Self.
+    fn from_x7(expr: &Expr) -> Result<Self, Box<dyn Error + Send>>;
+}
+#+end_src
+
+This trait encodes a fallible forward-and-backward mapping between some foreign type and x7's =Expr= type.
+If you're not familiar with =rust=, this adds methods to a type, and each operation
+either results in a =Result=, which encodes a success path, and a failure path of type =Box<dyn Error + Send>=.
+
+If the conversion fails for any reason, we try our best to type erase that error in terms
+of =Box<dyn Error + Send>=. This error trait object helps a lot with wrangling different error types
+into just one that we can reason about. That =Error= trait is the =std::error::Error= trait, which helps
+interoperability between different rust programs. The =Send= trait bound is required as
+our motivating example is =redis-oxide=, which requires that errors be sent between threads.
+There's creates some unfortunate boilerplate around handling errors, but thankfully it's only around twenty lines.
+
+*** Example implementation of ForeignData
+
+The last few paragraphs sound fancy, but we're really doing something simple here: converting between two different types. We'll have some foreign data type called =MyData=,
+defined as a rust enum:
+
+#+begin_src rust
+  #[derive(Debug)]
+  enum MyData {
+      Int(u32),
+      String(String),
+  }
+#+end_src
+
+We'll also need a way to express errors as a =Box<dyn Error + Send>=, so we'll
+add a basic =MyError= type with some boilerplate:
+
+#+begin_src rust
+  // A struct to hold the error string
+  #[derive(Debug)]
+  struct MyError(String);
+
+  // Display is required for std::error::Error
+  impl std::fmt::Display for MyError {
+      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+          write!(f, "Error: {}", self.0)
+      }
+  }
+
+  // Actually implement std::Error::Error for MyError
+  impl std::error::Error for MyError {}
+
+  impl MyError {
+      // An easy way to construct this error
+      fn boxed(err: String) -> Box<dyn std::error::Error + Send> {
+          Box::new(MyError(err))
+      }
+  }
+#+end_src
+
+This will help us return errors when someone for example tries to convert a x7 function
+into a =MyData=.
+
+Now that we have the boilerplate out of the way, we can implement =ForeignData= for =MyData=!
+
+#+begin_src rust
+  // Necessary imports
+  use x7::ffi::{ExprHelper, ForeignData};
+  use x7::symbols::Expr;
+
+  // ForeignData implementation for MyData
+  impl ForeignData for MyData {
+      fn to_x7(&self) -> Result<Expr, Box<dyn std::error::Error + Send>> {
+          // The forward direction is actually infallible
+          let res = match self {
+              MyData::Int(i) => Expr::Num((*i).into()),
+              MyData::String(s) => Expr::String(s.clone()),
+          };
+          Ok(res)
+      }
+
+      fn from_x7(expr: &Expr) -> Result<Self, Box<dyn std::error::Error + Send>> {
+          // The backward direction _is_ fallible.
+          // e.g. There's no way to express x7 functions in terms of MyData
+          let res = match expr {
+              Expr::Num(i) => MyData::Int(i.to_u64()?), // to_u64 is a ExprHelper method
+              Expr::String(s) => MyData::String(s.clone()),
+              unknown_type => {
+                  let err_msg = format!("{} cannot be converted to MyData", unknown_type);
+                  return Err(MyError::boxed(err_msg));
+              }
+          };
+          Ok(res)
+      }
+  }
+#+end_src
+
+Relatively speaking that's a lot of code for a simple conversion, but we can 
+leverage the =ForeignData= trait to make some cool things for our FFI.
+
+** Implementing ForeignData for common types
+
+To maximize convenience and skirt around rust's orphan rule, we'll provide ForeignData implementations
+for common types like =String= and =u64=. There's a lot of these implementations in the =ffi.rs= file in x7.
+
+#+begin_src rust
+impl ForeignData for u64 {
+    fn to_x7(&self) -> Result<Expr, Box<dyn Error + Send>> {
+        Ok(Expr::Num((*self).into()))
+    }
+
+    fn from_x7(expr: &Expr) -> Result<Self, Box<dyn Error + Send>> {
+        expr.to_u64()
+    }
+}
+#+end_src
+
+This will allow users to make functions using common rust types, and not worry about the details.
+
+** Foreign Functions: The IntoX7Function Trait
+
+Now that we can reason about foreign data, we want a way to convert functions written in terms
+of foreign data types into something x7 can use. We'll use a technique known as extension traits to add a
+=.to_x7_fn()= method to functions. We'll ignore variadic (any number of arguments) functions for
+now, and only focus on functions with a known number of arguments.
+
+The basic ingredients for a x7 function is:
+
+1. A =X7FunctionPtr=, the pointer to the x7 function, which has some serious restrictions.
+   1. The function has the shape =Fn(Vector<Expr>, &SymbolTable) -> LispResult<Expr>=.
+   2. We require Sync + Send bounds to ensure thread safety (and make it compile).
+2. A minimum number of arguments.
+3. A symbol to represent the function (=my-ff=, etc).
+
+We can use some trait magic to automate the first two, by having a trait that takes =self= and
+and returns the minimum number of args, and the X7FunctionPtr:
+
+#+begin_src rust
+pub trait IntoX7Function<Args, Out> {
+    fn to_x7_fn(self) -> (usize, crate::symbols::X7FunctionPtr);
+}
+#+end_src
+
+An interesting part of this trait is the =<Args, Out>= types. We need those types to help differentiate our implementations
+of =IntoX7Function=, and support variadics later on. The general implementation concept for a function that takes =n= arguments is:
+
+1. Make an x7 function: =Fn(args: Vector<Expr>, _sym: &SymbolTable) -> LispResult<Expr>=
+2. Verify that exactly =n= arguments are passed (=args.len()==n=).
+3. Convert each x7 =Expr= argument to the type we need with =ForeignData::from_x7()=.
+   1. Return a nice error message if that fails.
+4. Call the foreign function with those now-converted arguments.
+   1. Then capture and convert the function output with =Out::to_x7()= - x7 needs an =Expr=!
+   2. Massage any errors into the error type x7 expects (=anyhow::Error=)
+
+With that in mind, here's what the two argument implementation looks like without comments:
+
+#+begin_src rust
+impl<F, A, B, Out> IntoX7Function<(A, B), Out> for F
+where
+    A: ForeignData,
+    B: ForeignData,
+    Out: ForeignData,
+    F: Fn(A, B) -> Out + Sync + Send + 'static,
+{
+    fn to_x7_fn(self) -> (usize, crate::symbols::X7FunctionPtr) {
+        let f = move |args: Vector<Expr>, _sym: &SymbolTable| {
+            crate::exact_len!(args, 2);
+            let a = convert_arg!(A, &args[0]);
+            let b = convert_arg!(B, &args[1]);
+            (self)(a, b).to_x7().map_err(|e| anyhow!("{:?}", e))
+        };
+        (2, Arc::new(f))
+    }
+}
+#+end_src
+
+And here's what it looks like with comments:
+
+#+begin_src rust
+  // We're working with a function with two arguments,
+  // that returns a single output type Out.
+  impl<F, A, B, Out> IntoX7Function<(A, B), Out> for F
+  where
+      // All inputs and outputs to this function require ForeignData
+      A: ForeignData,
+      B: ForeignData,
+      Out: ForeignData,
+      // X7FunctionPtr requires Sync + Send, so we add that restriction to F
+      F: Fn(A, B) -> Out + Sync + Send + 'static,
+  {
+      fn to_x7_fn(self) -> (usize, crate::symbols::X7FunctionPtr) {
+          // This closure conforms to the shape X7FunctionPtr requires,
+          // namely a function that takes a Vector<Expr> and a symbol table reference.
+          //
+          // args: (<ff-symbol> 1 2) -> vector![Expr::Num(1), Expr::Num(2)]; actual args passed
+          // _sym: A symbol table reference. Unused.
+          let f = move |args: Vector<Expr>, _sym: &SymbolTable| {
+              // exact_len: macro to throw an error if args.len() != 2.
+              crate::exact_len!(args, 2);
+              // convert_arg: macro that calls A::from_x7(&args[0]) and return a nice error if that fails
+              let a = convert_arg!(A, &args[0]);
+              let b = convert_arg!(B, &args[1]);
+              (self)(a, b) // (self)(a,b) calls the foreign function with args a, b
+                  .to_x7() // convert the output to an x7 Expr
+                  .map_err(|e| anyhow!("{:?}", e)) // massage error type to x7's error type (anyhow)
+          };
+          // Finally, return a tuple of minimum args + our function
+          (2, Arc::new(f))
+      }
+  }
+#+end_src
+
+x7's FFI system contains similar implementations for functions that take one args to five args.
+The appendix will cover variadic functions. All of this gives us the power to do:
+
+#+begin_src rust
+  let my_ff = |a: u64, b: u64| a + b; 
+  let my_ff_x7 = my_ff.to_x7_fn();
+#+end_src
+
+Which is great, but now we need a way to make a x7 interpreter instance and actually add that =my_ff= function to it.
+
+** The X7Interpreter
+
+This part is thankfully much simpler than previous sections. We only need a struct holding a =SymbolTable= and a way to run programs on it.
+
+#+begin_src rust
+#[derive(Clone)]
+pub struct X7Interpreter {
+    symbol_table: SymbolTable,
+}
+#+end_src
+
+And a way to make a new one:
+
+#+begin_src rust
+impl X7Interpreter {
+    /// Make a new interpreter instance.
+    pub fn new() -> Self {
+        X7Interpreter {
+            symbol_table: crate::stdlib::create_stdlib_symbol_table_no_cli(),
+        }
+    }
+   // elided...
+}
+#+end_src
+
+Finally, we need a way to run programs. We'll just take the program string as a =&str=, and call the usual lisp function of =read= and =eval=:
+
+#+begin_src rust
+  impl X7Interpreter {
+      /// Run a x7 program.
+      pub fn run_program<T: 'static + ForeignData>(
+          &self,
+          program: &str,
+      ) -> Result<T, Box<dyn Error + Send>> {
+          let mut last_expr = Expr::Nil;
+          for expr in read(program) {
+              last_expr = expr
+                  .and_then(|expr| expr.eval(&self.symbol_table))
+                  .map_err(ErrorBridge::new)?;
+          }
+          T::from_x7(&last_expr)
+      }
+  }
+#+end_src
+
+This function parses the input (=read=), and then for every expression in the program call =eval= and return errors as necessary.
+We need to return something, so we default to =Expr::Nil= and return the last expression. The user needs to specify the output type =T=,
+as we want to actually return something. It's now possible to do:
+
+#+begin_src rust
+  fn main() {
+      let interpreter = X7Interpreter::new();
+      let output = interpreter.run_program::<u64>("(+ 1 1)").unwrap();
+      println!("output: {}", output);
+      // prints "output: 2"
+  }
+#+end_src
+
+Finally, we need a way to add functions to the interpreter. This is also straightforward thanks to =IntoX7Function=:
+
+#+begin_src rust
+  impl X7Interpreter {
+      /// Add a function to the interpreter under the symbol `function_symbol`
+      pub fn add_function(
+          &self,
+          function_symbol: &'static str,
+          fn_tuple: (usize, crate::symbols::X7FunctionPtr),
+      ) {
+          let (minimum_args, fn_ptr) = fn_tuple;
+          // The `true` at the end tells x7 to evaluate arguments passed in.
+          let f = Function::new(function_symbol.into(), minimum_args, fn_ptr, true);
+          self.symbol_table
+              .add_symbol(function_symbol, Expr::Function(f));
+      }
+  }
+#+end_src
+
+All we're doing is making a new =Function= struct instance, and adding the function to the interpreter with under the symbol =function_symbol=.
+Here's an example:
+
+#+begin_src rust
+fn main() {
+    let interpreter = X7Interpreter::new();
+
+    // Make and add the function to x7 under the symbol my-ff
+    let my_ff = |a: u64, b: u64| a + b;
+    interpreter.add_function("my-ff", my_ff.to_x7_fn());
+
+    let output = interpreter.run_program::<u64>("(my-ff 1 1)").unwrap();
+    println!("output: {}", output); // prints "output: 2"
+}
+#+end_src
+
+Interestingly, we can also see our careful handling of errors has paid off. The following x7 program:
+
+#+begin_src lisp
+(my-ff 1 "i am a string")
+#+end_src
+
+Fails with this error message, as =my-ff= expects a =u64= not a string:
+
+#+begin_example
+Error in Fn<my-ff, 2, [ ]>, with args (1 "i am a string")
+
+Caused by:
+    Error: Expected num, but got type 'str': "i am a string"
+
+    Caused by:
+        BadTypes
+#+end_example
+
+** Conclusion
+
+The x7 FFI system was very interesting for me to figure out, and this is what came out.
+I hope you enjoyed the article - it's certainly more code and concept heavy than previous articles.
+
+Overall I think there's some room for improvement in the FFI system, but it's powerful and convenient enough
+to be embedded into =redis-oxide=, so I am content for now.
+
+** Appendix: Variadics
+
+
+Thanks to the signature of =IntoX7Function=, we can add a type =Variadic= and implement =IntoX7Function= in terms of it.
+
+#+begin_src rust
+  pub struct Variadic<T>(Vec<T>);
+
+  impl<T> Variadic<T> {
+      pub fn to_vec(self) -> Vec<T> {
+          self.0
+      }
+  }
+#+end_src
+
+Note: The underlying =Vec<T>= forces us to use the single type for every variadic argument.
+This isn't necessary a big deal, but it is something to keep in mind.
+
+We now implement =IntoX7Function= in terms of =Variadic=:
+
+#+begin_src rust
+impl<F, T: ForeignData, Out> IntoX7Function<(Variadic<T>,), Out> for F
+where
+    T: ForeignData,
+    Out: ForeignData,
+    F: Fn(Variadic<T>) -> Out + Sync + Send + 'static,
+{
+    fn to_x7_fn(self) -> (usize, crate::symbols::X7FunctionPtr) {
+        let f = move |args: Vector<Expr>, _sym: &SymbolTable| {
+            let args = match args.iter().map(T::from_x7).collect::<Result<Vec<_>, _>>() {
+                Ok(v) => v,
+                Err(e) => return Err(anyhow!("{:?}", e)),
+            };
+            (self)(Variadic(args))
+                .to_x7()
+                .map_err(|e| anyhow!("{:?}", e))
+        };
+        (1, Arc::new(f))
+    }
+}
+#+end_src
+
+For interest, this is what using =Variadic= in redis-oxide looks like:
+
+#+begin_src rust
+  let send_fn = move |args: Variadic<RedisValueRef>| {
+      let args = args.to_vec();
+      // ... use args as a vec ...
+      // ... implementation details coming in future article ..
+  };
+  self.interpreter.add_function("redis", send_fn.to_x7_fn());
+#+end_src
+
+This variadic FFI interface allows us to provide a _fully featured_ redis-oxide API in about 20 lines of code,
+as commands are converted directly into the internal representation for command processing:
+
+#+begin_src lisp
+  ;; No special API code! Directly converted and passed to the command processor
+  (redis "mset" "key1" "value1" "key2" "value2")
+  (redis "lpush" "list-key" "value1" "value2")
+#+end_src
