@@ -3,7 +3,7 @@
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="navbar-collapse" id="navbarSupportedContent">
-    <ul class="navbar-nav mr-auto">
+    <div class="navbar-nav mr-auto">
         <div class="container monospace">
             <div class="row">
                 <div class="col-sm tight-column {% if kv.nav_site_href == base.root_uri %} navbar-underlined {% endif %}">
@@ -26,6 +26,6 @@
                 </div>
             </div>
         </div>
-    </ul>
+    </div>
   </div>
 </nav>
