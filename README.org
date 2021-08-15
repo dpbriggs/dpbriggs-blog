@@ -33,6 +33,45 @@ Running the website locally is pretty easy, thanks to =cargo= and =rustup=.
 Alternatively, use the make file:
 
 #+begin_example
-make watch # live-reload 
+make watch # live-reload
 make test  # run tests
 #+end_example
+
+** Deploying the website
+
+As is tradition, we need several ways to build the website.
+The server which runs my website is running a stable version of Ubuntu, and my arch system
+has a relatively new version of Glibc. It's no longer possible for me to run =make_package.sh=
+and upload the artifacts.
+
+So I added a quick docker container which will generate the build artifacts.
+
+*** Using docker
+
+To build the container:
+
+#+begin_example
+  cd docker
+  docker build . -t blog-maker
+#+end_example
+
+This will setup a container with rust running ubuntu 18.04.
+
+To generate a build artifact:
+
+#+begin_example
+docker run --rm -v ~/programming/dpbriggs-blog:/source blog-maker
+#+end_example
+
+This will output something like:
+
+#+begin_example
+... rust build stuff ...
+Created project archive dpbriggs-blog-Aug-15-2021-06-47PM.zip in current directory.
+Simply copy to server, unzip, and use:
+systemctl --user restart run_site run_caddy
+#+end_example
+
+If this succeeds, you'll have a new artifact that looks like =dpbriggs-blog-Aug-15-2021-06-47PM.zip= in the repo root.
+
+*NOTE*: This zip only builds off of the latest committed master. Some files, like =.caddy-env= will need to be copied onto the server normally.
