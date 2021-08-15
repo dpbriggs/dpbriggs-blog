@@ -3,3 +3,8 @@ h1,h2,h3,h4 {
     text-decoration-thickness: 1px;
     padding-bottom: 7px;
 }
+
+.blog-title {
+    text-decoration: none;
+    padding-bottom: 0px;
+}

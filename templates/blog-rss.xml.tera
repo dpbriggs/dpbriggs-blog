@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
     <channel>
-        <title>dpbriggs.ca blog</title>
-        <link>https://dpbriggs.ca/blog</link>
+        <title>{{ base.domain_name }} blog</title>
+        <link>https://{{ base.domain_name | safe }}{{ base.blog_uri | safe }}</link>
         <description>Tech articles || rust</description>
         {% for article in blog.blog_files %}
         <item>
             <title>{{ article.title }}</title>
-            <link>https://{{ base.domain_name }}{{base.blog_uri}}/{{ article.slug }}</link>
-            <description>{{ article.desc }} </description>
-            <date> {{ article.date }} </date>
-            <pubDate> {{ article.pub_date }} </pubDate>
+            <link>https://{{ base.domain_name | safe }}{{ base.blog_uri | safe }}/{{ article.slug | safe }}</link>
+            <description>{{ article.desc | safe }} </description>
+            <date> {{ article.date | safe }} </date>
+            <pubDate> {{ article.pub_date | safe }} </pubDate>
         </item>
         {% endfor %}
     </channel>

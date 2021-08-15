@@ -4,7 +4,7 @@
         {% include "head" %}
         <title>
             {% block title %}
-            dpbriggs / {{ kv.title }}
+            {{ base.internet_handle }} / {{ kv.title }}
             {% endblock title %}
         </title>
     </head>

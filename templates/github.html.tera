@@ -6,7 +6,7 @@
         <div class="container center-desktop d-flex h-100">
             <div class="row align-items-center w-100">
                 <div class="align-self-center bordered mx-auto index-card">
-                    <h3> dpbriggs | <a href="{{ base.github_url }}" target="_blank"> Github<span class="sr-only">(current)</span></a></h3>
+                    <h3> {{ base.internet_handle }} | <a href="{{ base.github_url }}" target="_blank"> Github<span class="sr-only">(current)</span></a></h3>
                     <br>
                     These are projects I work on for fun.
                     I have recently taken an interest in <b>Databases</b> and related <b>Data-Structures</b>.
@@ -18,7 +18,7 @@
                     <br>
                     <ul class="list-group">
                         <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/redis-oxide" target="_blank">
+                            <a href="{{ base.github_url }}/redis-oxide" target="_blank">
                                 redis-oxide
                             </a>
                             <br>
@@ -26,7 +26,16 @@
                             Rust/Tokio/Redis
                         </li>
                         <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/convenient-skiplist" target="_blank">
+                            <a href="{{ base.github_url }}/x7" target="_blank">
+                                x7
+                            </a>
+                            <br>
+                            Self-documenting written in rust, featuring a convenient FFI system, stateful records, and more.<br>
+                            Used in redis-oxide as a scripting language (sorted sets).<br>
+                            Rust/Lisp
+                        </li>
+                        <li class="list-group-item">
+                            <a href="{{ base.github_url }}/convenient-skiplist" target="_blank">
                                 convenient-skiplist
                             </a>
                             <br>
@@ -37,7 +46,7 @@
                             Rust/Iterator/Serde
                         </li>
                         <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/growable-bloom-filters" target="_blank">
+                            <a href="{{ base.github_url }}/growable-bloom-filters" target="_blank">
                                 growable-bloom-filters
                             </a>
                             <br>
@@ -46,7 +55,7 @@
                             Rust/Serde
                         </li>
                         <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/dpbriggs-blog" target="_blank">
+                            <a href="{{ base.github_url }}/dpbriggs-blog" target="_blank">
                                 dpbriggs-blog
                             </a>
                             <br>
@@ -54,7 +63,7 @@
                             Rust/Rocket/Bootstrap/Tera
                         </li>
                         <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/kv" target="_blank">
+                            <a href="{{ base.github_url }}/kv" target="_blank">
                                 kv
                             </a>
                             <br>
@@ -62,7 +71,7 @@
                             Rust/Serde/Bash
                         </li>
                         <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/Distributed-Sieve-e" target="_blank">
+                            <a href="{{ base.github_url }}/Distributed-Sieve-e" target="_blank">
                                 Distributed-Sieve-e
                             </a>
                             <br>
@@ -70,7 +79,7 @@
                             Clojure/Java{Socket,ServerSocket}
                         </li>
                         <li class="list-group-item">
-                            <a href="https://github.com/dpbriggs/Salesman-Problem-Genetic-Algorithm" target="_blank">
+                            <a href="{{ base.github_url }}/Salesman-Problem-Genetic-Algorithm" target="_blank">
                                 Salesman-Problem-Genetic-Algorithm
                             </a>
                             <br>

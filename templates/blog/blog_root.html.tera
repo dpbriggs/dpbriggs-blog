@@ -1,7 +1,7 @@
 {% extends "blog/blog_base" %}
 
 {% block blog_title %}
-<h4 class="monospace">dpbriggs blog</h4>
+<h3 class="monospace blog-title">{{ base.internet_handle }} blog</h4>
 {% endblock blog_title %}
 
 <!-- -------------------- Sidebar -------------------- -->

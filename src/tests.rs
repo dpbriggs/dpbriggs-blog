@@ -26,7 +26,8 @@ mod test {
             "/static/favicons/safari-pinned-tab.svg",
             "/static/favicons/favicon.ico",
             "/static/favicons/browserconfig.xml",
-            "/static/css/dpbriggs.css",
+            "/static/css/site.css",
+            "/static/css/blog.css",
             "/static/css/solarized-dark.css",
             "/static/css/bootstrap-slate.css",
         ];
@@ -79,7 +80,6 @@ mod test {
             "github_url",
             "github_repo_url",
             "linkedin_url",
-            "nav_site_href",
         ];
         for key in necessary_keys {
             assert!(base_context.contains_key(key))
