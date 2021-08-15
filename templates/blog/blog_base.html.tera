@@ -32,4 +32,6 @@
         </main>
     </div>
 </div>
+
+<link rel="stylesheet" href="/static/css/blog.css">
 {% endblock content %}

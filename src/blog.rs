@@ -164,7 +164,7 @@ pub fn get_org_mode_files(blog_root: &str) -> Vec<OrgModeHtml> {
         }
         Err(e) => {
             error!("Cannot get org mode files!");
-            panic!(e)
+            panic!("{}", e);
         }
     }
 }

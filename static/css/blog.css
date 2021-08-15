@@ -1,0 +1,5 @@
+h1,h2,h3,h4 {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    padding-bottom: 7px;
+}
