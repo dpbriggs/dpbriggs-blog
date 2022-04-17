@@ -506,6 +506,14 @@ The conversion function is actually pretty mechanical:
 #+begin_src rust
   // First, we need a convenient way to convert our index pairs into byte slices.
   impl BufSplit {
+      /// Get a lifetime appropriate slice of the underlying buffer.
+      ///
+      /// Constant time.
+      #[inline]
+      fn as_slice<'a>(&self, buf: &'a BytesMut) -> &'a [u8] {
+          &buf[self.0..self.1]
+      }
+
       /// Get a Bytes object representing the appropriate slice
       /// of bytes.
       ///
