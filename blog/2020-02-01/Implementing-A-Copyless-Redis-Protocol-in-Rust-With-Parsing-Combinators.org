@@ -5,8 +5,8 @@
 #+ATTR_HTML: target="_blank"
 
 * Implementing a Copyless Redis Protocol in Rust with Parsing Combinators
-  
-[[https://redis.io/][Redis]] is a fantastic noSQL database with a beautifully simple design. 
+
+[[https://redis.io/][Redis]] is a fantastic noSQL database with a beautifully simple design.
 One of the fundamental responsibilities of the redis server is to encode
 and decode RESP (Redis Serialization Protocol) messages. For example, when a client issues the command:
 
@@ -26,7 +26,7 @@ so it can perform the operation. This blog post will go through
 my efforts to implement a copyless RESP parser in [[https://github.com/dpbriggs/redis-oxide][redis-oxide.]]
 
 ** Redis Serialization Protocol (RESP)
-   
+
 The redis folks were kind enough to simply document the v3 protocol [[https://redis.io/topics/protocol][on their website]].
 The protocol is CLRF (=\r\n=) delimited, with each word carrying a type.
 The simplest types are Simple Strings and Errors, which look like:
@@ -116,7 +116,7 @@ pub type Key = Bytes;
 Aside from a massive related refactoring job, we now need to just write the parser 😛.
 
 ** Writing the Parser
-   
+
 Writing the parser will require us to solve a few problems:
 
 1. Data representation and type transformations.
@@ -125,7 +125,7 @@ Writing the parser will require us to solve a few problems:
 4. Dealing with arrays.
 
 *** Data Representation and Type Transformations
-    
+
 To better understand our requirements, let us first consider our /output/ type:
 
 #+begin_src rust
@@ -188,7 +188,7 @@ Representing the string byte slice "FOO".
 Now that we can represent our values, we'll need to consider error handling.
 
 *** Error handling and Types
-    
+
 There's a lot of ways that parsing can fail. A client could send us straight garbage, or something more subtle like an off-by-one error.
 We'll list each error in an enum type:
 
@@ -235,7 +235,7 @@ All subsequent parsers will eventually need to output =RedisResult=.
 ** Writing the Fundamental Parser
 
 Now that we understand our data representation and errors, lets write our first parser! As mentioned several times,
-RESP is a _word_ based protocol. So lets write a word parser! The only thing we care about is finding the 
+RESP is a _word_ based protocol. So lets write a word parser! The only thing we care about is finding the
 position (index) of the next CLRF.
 
 As this is infallible, we don't necessary need to use the =RedisResult= type. So our function can have the following signature:
@@ -299,7 +299,7 @@ So all we're doing is wrapping the =BufSplit= returned by =word= in the appropri
 Nice! So our easy types are out of the way. We now need to parse ints, bulk strings, and finally arrays.
 
 ** Parsing Ints
-   
+
 Ints are the first non-trivial type to parse. RESP represents signed 64 bit integers as a base 10 string,
 so we'll need to:
 
@@ -334,7 +334,7 @@ fn resp_int(buf: &BytesMut, pos: usize) -> RedisResult {
 #+end_src
 
 ** Bulk Strings
-   
+
 So bulk strings in RESP start with a length (=i64=), and then the string content (delimited by CLRF of course).
 So we can use our previous =int= function, and then work through the possible cases (see second code block for comments).
 
@@ -392,7 +392,7 @@ fn bulk_string(buf: &BytesMut, pos: usize) -> RedisResult {
 Now we have only one type left: Arrays.
 
 ** Arrays: An Issue
-   
+
 Arrays are fundamentally more complex than other types as they are a *sequence* of redis values. We'll have to be more clever.
 They are defined as a size (=i64=) and then a =size= number of redis values. This is naturally recursive, as we can have arrays inside arrays.
 
@@ -402,7 +402,7 @@ But that generic parse function will also need to call the array parser!
 Thankfully we can use some first year CS.
 
 ** Mutual Recursion: Top Level Parse Function and Arrays
-   
+
 Lets first define our top level parse function. It's responsible for taking a buffer and returning a =RedisResult=, agnostic to particular RESP types.
 RESP tags every element with a type byte, so our function is short:
 
@@ -492,7 +492,7 @@ fn array(buf: &BytesMut, pos: usize) -> RedisResult {
 So we can now parse arrays, and can now put everything together.
 
 ** Putting everything together
- 
+
 
 We're so close! We just need a few conversion functions before we can implement =Decoder=.
 Once we're done parsing, we're guaranteed to have a contiguous
@@ -561,7 +561,7 @@ We can now implement the =Decoder= trait so our parser fits in with the =tokio= 
               Some((pos, value)) => {
                   // We parsed a value! Shave off the bytes so tokio can continue filling the buffer.
                   let our_data = buf.split_to(pos);
-                  // Use `redis_value` defined above to get the correct type 
+                  // Use `redis_value` defined above to get the correct type
                   Ok(Some(value.redis_value(&our_data.freeze())))
               }
               None => Ok(None),
@@ -575,6 +575,6 @@ A complete parser includes /encoding/ RedisValueRef's, but the code is pretty si
 You can view the [[https://github.com/dpbriggs/redis-oxide/blob/535333eae64c9709614b34d4450f32f57372bb3d/src/asyncresp.rs#L238][tests here]] and how it's actually used in [[https://github.com/dpbriggs/redis-oxide/blob/535333eae64c9709614b34d4450f32f57372bb3d/src/server.rs#L44][redis-oxide here]].
 
 ** Conclusion
-   
+
 Overall this 500+ line journey has netted us an efficient, zero copy RESP parser using parsing combinators.
-It was a lot of work to get the project refactored, but I am proud to have a solution I wrote myself and actually understand (no offense to the combine people). 
+It was a lot of work to get the project refactored, but I am proud to have a solution I wrote myself and actually understand (no offense to the combine people).
