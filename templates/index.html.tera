@@ -5,17 +5,15 @@
 <span> {{ base.full_name }} {{ base.web_sep }} {{ base.my_email }} </span>
 <br>
 <br>
-Hi, I'm a software developer and computer science graduate from the University of Waterloo.
-I enjoy building out complex and secure applications.
+Hi, I'm a SWE turned SRE @ <b>Google</b> and a computer science graduate from the University of Waterloo.
+I currently work on core cryptographic systems and make sure they never fall over.
 <br>
 <br>
-I have worked in <b>Security Orchestration & Automation</b>, <b>Ad Tech</b>, <b>Healthcare</b>, and
-<b>Enterprise Container R&D</b>.
-I've also designed <b>Big Data</b> solutions involving event-driven generic container frameworks.
+I have worked in <b>Security & Reliability</b>, <b>Security Orchestration & Automation</b>, <b>Ad Tech</b>, <b>Healthcare</b>, and
+<b>Enterprise R&D</b>.
 <br>
 <br>
-During my school terms I dabbled in <b>Contracting</b> as well, where I learned how to mentor new team members
-and operate under very tight schedules.
+I've also <b>contracted</b> as well; making sure deliverables arrive on time and quickly integrating myself into the team.
 <br>
 <br>
 My go-to languages include <b>Python</b>, <b>Rust</b>, <b>Bash</b>, <b>C++</b>, and <b>Scala</b>.
