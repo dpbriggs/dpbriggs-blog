@@ -75,3 +75,9 @@ systemctl --user restart run_site run_caddy
 If this succeeds, you'll have a new artifact that looks like =dpbriggs-blog-Aug-15-2021-06-47PM.zip= in the repo root.
 
 *NOTE*: This zip only builds off of the latest committed master. Some files, like =.caddy-env= will need to be copied onto the server normally.
+
+** Attribution
+
+- [[https://github.com/highlightjs/highlight.js/blob/main/LICENSE][highlight.js]]
+- [[https://github.com/twbs/bootstrap/blob/v4.2.1/LICENSE][Bootstrap]]
+- [[https://github.com/thomaspark/bootswatch/blob/v5/LICENSE][Bootstrap slate]]

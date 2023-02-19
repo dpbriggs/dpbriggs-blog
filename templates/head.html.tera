@@ -4,10 +4,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 <!-- Bootstrap CSS -->
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+<link rel="stylesheet" href="/static/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS">
 <!-- Highlight JS -->
-<link rel="stylesheet"
-      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.14.1/styles/default.min.css">
+<link rel="stylesheet" href="/static/css/highlight-js.css" integrity="sha384-M2NkNzZjNmZjOWZhYjU1Y2FjMTk5NDhiYTQ0MTA4YmMyYjI0YzM4Cg==">
 <link rel="stylesheet" href="/static/css/site.css">
 <link rel="stylesheet" href="/static/css/solarized-dark.css">
 <link rel="stylesheet" href="/static/css/bootstrap-slate.css">
@@ -21,10 +20,9 @@
 <meta name="msapplication-TileColor" content="#da532c">
 <meta name="msapplication-config" content="/static/favicons/browserconfig.xml">
 <meta name="theme-color" content="#ffffff">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/instantclick/3.1.0/instantclick.min.js" integrity="sha256-T8RTGotskdhLXy/3avHtzYliRm9WCbiiqm5dbCVH87s=" crossorigin="anonymous" data-no-instant></script>
-<meta name="viewport"
-      content="width=device-width, initial-scale=1">
-<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.14.1/highlight.min.js"></script>
+<script src="/static/js/instantclick-3.1.0.min.js" integrity="sha256-T8RTGotskdhLXy/3avHtzYliRm9WCbiiqm5dbCVH87s=" crossorigin="anonymous" data-no-instant></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/static/js/highlight-9.14.1.min.js" integrity="sha384-bBNZLGA5vvpsbPaeqxpPUZ0InDBFyB1cr0JCFxKQf3OxCyF5gR4nEy0mScUYbw5T%"></script>
 <script>hljs.initHighlightingOnLoad();</script>
 <meta name="google-site-verification" content="Lnuy_8fEKiBoRut4jwgeLaMlh1Enz0tI91nzFUiM2Ig" />
 <!-- Global site tag (gtag.js) - Google Analytics -->

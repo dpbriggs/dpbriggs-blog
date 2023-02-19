@@ -11,12 +11,12 @@
     <body>
         <div>
         </div>
-            {% include "navbar" %}
+        {% include "navbar" %}
 
-            {% block content %}
-            {% endblock content %}
+        {% block content %}
+        {% endblock content %}
 
-            {% include "scripts" %}
+        {% include "scripts" %}
         </div>
         <script data-no-instant>InstantClick.init();</script>
     </body>
