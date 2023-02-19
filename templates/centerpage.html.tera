@@ -1,7 +1,7 @@
 {% extends "base" %}
 
 {% block content %}
-<div class="monospace"
+<div class="monospace">
      <div>
         <div class="container-fluid center-desktop d-flex h-100">
         <div class="row align-items-center w-100">
