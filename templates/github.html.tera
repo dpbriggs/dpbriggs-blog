@@ -35,15 +35,12 @@
                             Rust/Lisp
                         </li>
                         <li class="list-group-item">
-                            <a href="{{ base.github_url }}/convenient-skiplist" target="_blank">
-                                convenient-skiplist
+                            <a href="{{ base.github_url }}/dpbriggs-blog" target="_blank">
+                                dpbriggs-blog
                             </a>
                             <br>
-                            Performant and convenient Skiplist featuring easy serialization and
-                            advanced iterators.<br>
-                            Special focus on optimal time complexities.<br>
-                            Used in redis-oxide (sorted sets).<br>
-                            Rust/Iterator/Serde
+                            My personal website and blog.<br>
+                            Rust/Rocket/Bootstrap/Tera
                         </li>
                         <li class="list-group-item">
                             <a href="{{ base.github_url }}/growable-bloom-filters" target="_blank">
@@ -55,12 +52,15 @@
                             Rust/Serde
                         </li>
                         <li class="list-group-item">
-                            <a href="{{ base.github_url }}/dpbriggs-blog" target="_blank">
-                                dpbriggs-blog
+                            <a href="{{ base.github_url }}/convenient-skiplist" target="_blank">
+                                convenient-skiplist
                             </a>
                             <br>
-                            My personal website and blog.<br>
-                            Rust/Rocket/Bootstrap/Tera
+                            Performant and convenient Skiplist featuring easy serialization and
+                            advanced iterators.<br>
+                            Special focus on optimal time complexities.<br>
+                            Used in redis-oxide (sorted sets).<br>
+                            Rust/Iterator/Serde
                         </li>
                         <li class="list-group-item">
                             <a href="{{ base.github_url }}/kv" target="_blank">
