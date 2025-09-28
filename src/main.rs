@@ -13,20 +13,24 @@ mod routes;
 use axum::Router;
 use axum_template::engine::Engine;
 use tera::Tera;
-use tower_http::services::ServeDir;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 
 use crate::routes::get_routes;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
     let tera = Tera::new("templates/**/*.tera").unwrap();
     let engine = Engine::from(tera);
 
     let app = Router::new()
         .merge(get_routes())
         .nest_service("/static", ServeDir::new("static"))
-        .layer(axum::extract::Extension(engine));
+        .layer(axum::extract::Extension(engine))
+        .layer(TraceLayer::new_for_http());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
     axum::serve(listener, app).await?;
