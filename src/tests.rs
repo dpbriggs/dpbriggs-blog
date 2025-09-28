@@ -160,7 +160,7 @@ mod test {
 
     #[test]
     fn org_parser_should_throw_applicable_errors() {
-        use crate::blog::{get_html_contents, ParsingError};
+        use crate::blog::{ParsingError, get_html_contents};
         use std::path::PathBuf;
         let missing_date_loc = "tests/bad-org-mode-files/missing-date.html";
         let missing_date = PathBuf::from(missing_date_loc);

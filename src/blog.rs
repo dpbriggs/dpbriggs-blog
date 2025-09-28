@@ -121,7 +121,7 @@ pub fn get_html_contents(blog_file: &PathBuf) -> Result<OrgModeHtml, ParsingErro
         None => {
             return Err(ParsingError::CannotFindFirstParagraph(
                 blog_file.to_path_buf(),
-            ))
+            ));
         }
     };
 
