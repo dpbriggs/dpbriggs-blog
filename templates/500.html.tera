@@ -1,4 +1,4 @@
-{% extends "centerpage" %}
+{% extends "centerpage.html.tera" %}
 
 {% block centerpage %}
 <h1> 500 {{ base.web_sep }} {{ kv.uri }} </h1>

@@ -15,16 +15,6 @@ pub static BLOG_ROOT: &str = "blog/";
 /// foo.insert("key".to_owned(), "value".to_owned())
 type SiteContextKv = HashMap<String, String>;
 
-/// TemplateMap adds some indirection between
-/// routes and the actual templates used in the project.
-/// See [get_template](crate::context::get_template).
-///
-/// # Example
-///
-/// let template: &'static str = get_template("/blog")
-/// assert_eq!(template, "blog/blog_root")
-type TemplateMap = HashMap<&'static str, &'static str>;
-
 /// SiteContext represents the entire context required to render
 /// this website. See [get_base_context](crate::context::get_base_context)
 #[derive(Serialize, Debug)]
@@ -96,37 +86,4 @@ pub fn get_base_context(nav_href_uri: &str) -> SiteContext<'_> {
         blog: &STATIC_BLOG_ENTRIES,
         curr_blog: None,
     }
-}
-
-pub fn init_context() {
-    println!("{}", get_base_context("/").blog.blog_files.len());
-}
-
-macro_rules! template_map(
-    { $($key:expr => $value:expr),+ } => {
-        {
-            let mut m = TemplateMap::new();
-            $(
-                m.insert($key, $value);
-            )+
-                m
-        }
-    };
-);
-
-lazy_static! {
-    pub static ref TEMPLATE_MAP: TemplateMap = template_map! {
-        "/" => "index",
-        "404" => "404",
-        "500" => "500",
-        "/blog" => "blog/blog_root",
-        "/linkedin" => "linkedin",
-        "/github" => "github",
-        "/resume_pdf" => "resume/dpbriggs_resume.pdf",
-        "/resume" => "resume"
-    };
-}
-
-pub fn get_template(uri: &str) -> &str {
-    TEMPLATE_MAP.get(uri).unwrap()
 }

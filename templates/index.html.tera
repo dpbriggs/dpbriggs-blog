@@ -1,4 +1,4 @@
-{% extends "centerpage" %}
+{% extends "centerpage.html.tera" %}
 
 {% block centerpage %}
 <h3> {{ base.internet_handle }}  | <a href="#"> Home<span class="sr-only">(current)</span></a></h3>

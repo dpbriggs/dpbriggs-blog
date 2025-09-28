@@ -1,157 +1,142 @@
-use rocket::http::Status;
-use rocket::response::NamedFile;
-use rocket::Request;
-use rocket_contrib::serve::StaticFiles;
-use rocket_contrib::templates::Template;
+use crate::context::get_base_context;
+use axum::{
+    extract::{Extension, OriginalUri, Path},
+    http::StatusCode,
+    response::{IntoResponse, Redirect, Response},
+    routing::get,
+    Router,
+};
+use axum_template::RenderHtml;
+use axum_template::{engine::Engine, TemplateEngine};
+use tera::Tera;
+use tower_http::services::ServeFile;
 
-use crate::context::{get_base_context, get_template};
-use rocket::http;
-use rocket::Catcher;
-use rocket::Route;
+async fn redirect_trailing_slash(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    let uri = request.uri();
+    let path = uri.path();
 
-// And just like that, months and months later,
-// it just works.
-// Not used yet though lol - not sure how this got uncommented.
-// macro_rules! simple_route {
-//     ($name:ident, $route:literal, $title:literal) => {
-//         #[get($route)]
-//         fn $name() -> Template {
-//             let mut context = get_base_context($route);
-//             context.kv.insert("title".to_owned(), $title.to_owned());
-//             Template::render(get_template($route), context)
-//         }
-//     };
-// }
+    // Remove trailing slash (except for root "/")
+    if path.len() > 1 && path.ends_with('/') {
+        let new_path = path.trim_end_matches('/');
+        let new_uri = if let Some(query) = uri.query() {
+            format!("{}?{}", new_path, query)
+        } else {
+            new_path.to_string()
+        };
 
-#[get("/")]
-fn index() -> Template {
+        return Redirect::permanent(&new_uri).into_response();
+    }
+
+    next.run(request).await
+}
+
+pub fn get_routes() -> Router {
+    Router::new()
+        .route("/", get(index))
+        .route("/resume", get(resume))
+        .route("/blog", get(blog_index))
+        .route("/linkedin", get(linkedin))
+        .route("/github", get(github))
+        .route("/robots.txt", get(robots_txt))
+        .route("/feed", get(feed))
+        .route("/rss", get(rss))
+        .route_service("/resume_pdf", ServeFile::new("resume/dpbriggs_resume.pdf"))
+        .route("/500", get(crash))
+        .route("/blog/{slug}", get(blog_article))
+        .fallback(not_found)
+        .layer(axum::middleware::from_fn(redirect_trailing_slash))
+}
+
+async fn index(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
     let mut context = get_base_context("/");
     context.kv.insert("title".to_owned(), "home".into());
-    Template::render(get_template("/"), context)
+    RenderHtml("index.html.tera", engine, context)
 }
 
-#[get("/resume")]
-fn resume() -> Template {
+async fn resume(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
     let mut context = get_base_context("/resume");
     context.kv.insert("title".to_owned(), "resume".into());
-    Template::render(get_template("/resume"), context)
+    RenderHtml("resume.html.tera", engine, context)
 }
 
-#[get("/blog")]
-fn blog_index() -> Template {
+async fn blog_index(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
     let mut context = get_base_context("/blog");
     context.kv.insert("title".to_owned(), "blog".into());
-    Template::render(get_template("/blog"), context)
+    RenderHtml("blog/blog_root.html.tera", engine, context)
 }
 
-#[get("/linkedin")]
-fn linkedin() -> Template {
+async fn linkedin(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
     let mut context = get_base_context("/linkedin");
     context.kv.insert("title".to_owned(), "linkedin".into());
-    Template::render(get_template("/linkedin"), context)
+    RenderHtml("linkedin.html.tera", engine, context)
 }
 
-#[get("/github")]
-fn github() -> Template {
+async fn github(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
     let mut context = get_base_context("/github");
     context.kv.insert("title".to_owned(), "github".into());
-    Template::render(get_template("/github"), context)
+    RenderHtml("github.html.tera", engine, context)
 }
 
-// simple_route! {index, "/", "home"}
-// simple_route! {resume, "/resume", "resume"}
-// simple_route! {blog_index, "/blog", "blog"}
-// simple_route! {linkedin, "/linkedin", "linkedin"}
-// simple_route! {github, "/github", "github"}
-
-#[get("/robots.txt")]
-fn robots_txt() -> &'static str {
-    r#"
-# robots.txt
-User-agent: *
-Disallow:
-"#
+async fn robots_txt() -> impl IntoResponse {
+    "User-agent: *\nDisallow:"
 }
 
-#[derive(Responder)]
-struct Rss {
-    inner: Template,
-    header: http::ContentType,
+async fn feed(Extension(engine): Extension<Engine<Tera>>) -> Response {
+    rss(Extension(engine)).await
 }
 
-impl Rss {
-    fn new(inner: Template) -> Self {
-        Self {
-            inner,
-            header: http::ContentType::new("application", "rss+xml"),
-        }
+async fn rss(Extension(engine): Extension<Engine<Tera>>) -> Response {
+    let context = get_base_context("/blog");
+    let template = RenderHtml("blog-rss.xml.tera", engine, context);
+    (
+        StatusCode::OK,
+        [("Content-Type", "application/rss+xml")],
+        template.into_response(),
+    )
+        .into_response()
+}
+
+async fn crash() -> impl IntoResponse {
+    (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
+}
+
+async fn blog_article(
+    original_uri: OriginalUri,
+    Path(slug): Path<String>,
+    Extension(engine): Extension<Engine<Tera>>,
+) -> Response {
+    let mut context = get_base_context("/blog");
+    context.kv.insert("title".to_owned(), "blog".to_owned());
+    if let Some(curr_blog) = context.blog.html.get(&slug) {
+        context.curr_blog = Some(curr_blog);
+        context.kv.insert("curr_slug".to_owned(), slug);
+        RenderHtml("blog/blog_article.html.tera", engine, context).into_response()
+    } else {
+        not_found(original_uri, Extension(engine))
+            .await
+            .into_response()
     }
 }
 
-#[get("/feed")]
-fn feed() -> Rss {
-    rss()
-}
-
-#[get("/rss")]
-fn rss() -> Rss {
-    let context = get_base_context("/blog");
-    Rss::new(Template::render("blog-rss", context))
-}
-
-#[get("/resume_pdf")]
-fn resume_pdf() -> std::io::Result<NamedFile> {
-    NamedFile::open(get_template("/resume_pdf"))
-}
-
-#[get("/500")]
-fn crash() -> Result<String, Status> {
-    Err(Status::InternalServerError)
-}
-
-#[get("/blog/<slug>")]
-fn blog_article(slug: String) -> Option<Template> {
-    let mut context = get_base_context("/blog");
-    context.kv.insert("title".to_owned(), "blog".to_owned());
-    context.blog.html.get(&slug).map(|curr_blog| {
-        context.curr_blog = Some(curr_blog);
-        context.kv.insert("curr_slug".to_owned(), slug);
-        Template::render("blog/blog_article", context)
-    })
-}
-
-#[catch(404)]
-fn not_found(req: &Request<'_>) -> Template {
+async fn not_found(
+    OriginalUri(original_uri): OriginalUri,
+    Extension(engine): Extension<Engine<Tera>>,
+) -> impl IntoResponse {
     let mut context = get_base_context("/");
-    context.kv.insert("uri".to_owned(), req.uri().to_string());
     context.kv.insert("title".to_owned(), "404".to_owned());
-    Template::render(get_template("404"), context)
-}
-
-#[catch(500)]
-fn server_err(req: &Request<'_>) -> Template {
-    let mut context = get_base_context("/");
-    context.kv.insert("uri".to_owned(), req.uri().to_string());
-    context.kv.insert("title".to_owned(), "500".to_owned());
-    Template::render(get_template("500"), context)
-}
-
-pub fn get_routes() -> (StaticFiles, Vec<Route>, Vec<Catcher>) {
+    context
+        .kv
+        .insert("uri".to_owned(), original_uri.path().to_string());
+    context.kv.insert("blog_uri".to_owned(), "".to_owned());
+    use miette::IntoDiagnostic;
+    if let Err(e) = engine.render("404.html.tera", &context).into_diagnostic() {
+        println!("Error serializing context for 404 page: {:?}", e);
+    }
     (
-        StaticFiles::from("static"),
-        routes![
-            index,
-            crash,
-            resume,
-            blog_index,
-            linkedin,
-            github,
-            resume_pdf,
-            robots_txt,
-            blog_article,
-            rss,
-            feed
-        ],
-        catchers![server_err, not_found],
+        StatusCode::NOT_FOUND,
+        RenderHtml("404.html.tera", engine, context),
     )
 }

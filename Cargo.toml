@@ -1,20 +1,23 @@
 [package]
 name = "dpbriggs-blog"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["David Briggs <david@dpbriggs.ca>"]
-edition = "2018"
+edition = "2024"
 
 [dependencies]
-rocket = "0.4.10"
-lazy_static = "1.4.0"
-select = "0.4.3"
-serde = "1.0.102"
-serde_derive = "1.0.102"
-chrono = { version = "0.4.9", features = ["serde"] }
-simple_logger = "2.1.0"
-log = "0.4.8"
-
-[dependencies.rocket_contrib]
-version = "0.4.2"
-default-features = false
-features = ["tera_templates", "serve"]
+lazy_static = "1.5.0"
+select = "0.6.1"
+serde = "1.0.226"
+serde_derive = "1.0.226"
+chrono = { version = "0.4.42", features = ["serde"] }
+log = "0.4.28"
+tokio = { version = "1.47.1", features = ["full"] }
+axum = { version = "0.8.4", features = ["macros", "original-uri"] }
+tower-http = { version = "0.6.6", features = ["fs", "util"] }
+tera = "1.20.0"
+axum-template = { version = "3.0.0", features = ["tera"] }
+tokio-util = { version = "0.7.16", features = ["tracing"] }
+tracing-subscriber = "0.3.20"
+miette = { version = "7.6.0", features = ["fancy"] }
+tracing = "0.1.41"
+tower = "0.5.2"

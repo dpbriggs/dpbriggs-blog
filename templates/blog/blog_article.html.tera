@@ -1,4 +1,4 @@
-{% extends "blog/blog_base" %}
+{% extends "blog/blog_base.html.tera" %}
 
 <!-- -------------------- Title -------------------- -->
 
