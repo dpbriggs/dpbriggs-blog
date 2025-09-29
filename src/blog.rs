@@ -1,11 +1,14 @@
+use crate::error::SiteError;
 use chrono::NaiveDate;
+use miette::{Diagnostic, Result};
 use select::document::Document;
 use select::predicate::{Attr, Class, Name};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
-use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use thiserror::Error;
 
 type Slug = String;
 
@@ -36,20 +39,20 @@ pub struct OrgModeHtml {
     pub footnotes: Vec<String>,
 }
 
-fn get_html_files(base: &str) -> Result<Vec<PathBuf>, io::Error> {
+fn get_html_files(base: &str) -> Result<Vec<PathBuf>> {
     let base = PathBuf::from(base);
     if !base.is_dir() {
-        panic!("BLOG_ROOT is not a directory!")
+        return Err(SiteError::NotADirectory(base).into());
     }
     let mut html_files: Vec<PathBuf> = Vec::new();
-    for entry in fs::read_dir(base)? {
-        let entry = entry?;
+    for entry in fs::read_dir(&base).map_err(SiteError::from)? {
+        let entry = entry.map_err(SiteError::from)?;
         let path = entry.path();
         if !path.is_dir() {
             continue;
         }
-        for file in fs::read_dir(path)? {
-            let file = file?;
+        for file in fs::read_dir(path).map_err(SiteError::from)? {
+            let file = file.map_err(SiteError::from)?;
             let path = file.path();
             if path.is_dir() {
                 continue;
@@ -62,119 +65,110 @@ fn get_html_files(base: &str) -> Result<Vec<PathBuf>, io::Error> {
     Ok(html_files)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error, Diagnostic, PartialEq)]
 pub enum ParsingError {
+    #[error("Cannot find TOC in {0}")]
+    #[diagnostic(code(app::parsing::cannot_find_toc))]
     CannotFindToc(PathBuf),
+    #[error("Cannot parse date in {0}")]
+    #[diagnostic(code(app::parsing::cannot_parse_date))]
     CannotParseDate(PathBuf),
+    #[error("Cannot find title in {0}")]
+    #[diagnostic(code(app::parsing::cannot_find_title))]
     CannotFindTitle(PathBuf),
+    #[error("Cannot find first paragraph in {0}")]
+    #[diagnostic(code(app::parsing::cannot_find_first_paragraph))]
     CannotFindFirstParagraph(PathBuf),
+    #[error("Cannot find date in {0}")]
+    #[diagnostic(code(app::parsing::cannot_find_date))]
     CannotFindDate(PathBuf),
+    #[error("Cannot find contents in {0}")]
+    #[diagnostic(code(app::parsing::cannot_find_contents))]
     CannotFindContents(PathBuf),
-    CannotParseHtml(PathBuf),
+    #[error("Cannot make slug for {0}")]
+    #[diagnostic(code(app::parsing::cannot_make_slug))]
     CannotMakeSlug(PathBuf),
 }
 
-pub fn get_html_contents(blog_file: &PathBuf) -> Result<OrgModeHtml, ParsingError> {
-    let file_contents = fs::read_to_string(&blog_file);
-    let document = match file_contents {
-        Ok(contents) => Document::from(&contents[..]),
-        Err(e) => {
-            println!("{:?}", e);
-            return Err(ParsingError::CannotParseHtml(blog_file.to_path_buf()));
-        }
-    };
+pub fn get_html_contents(blog_file: &Path) -> Result<OrgModeHtml> {
+    let file_contents = fs::read_to_string(blog_file).map_err(SiteError::from)?;
+    let document = Document::from(file_contents.as_str());
 
-    let title = match document.find(Class("title")).next() {
-        Some(t) => t.text(),
-        None => return Err(ParsingError::CannotFindTitle(blog_file.to_path_buf())),
-    };
+    let title = document
+        .find(Class("title"))
+        .next()
+        .ok_or_else(|| ParsingError::CannotFindTitle(blog_file.to_path_buf()))?;
 
-    let date_string = match document.find(Class("timestamp")).next() {
-        Some(date) => date.text(),
-        None => return Err(ParsingError::CannotFindDate(blog_file.to_path_buf())),
-    };
+    let date_string = document
+        .find(Class("timestamp"))
+        .next()
+        .ok_or_else(|| ParsingError::CannotFindDate(blog_file.to_path_buf()))?;
 
     // <2019-02-06 Wed> == <%Y-%m-%d %a>
-    let date = match NaiveDate::parse_from_str(&date_string[..], "<%Y-%m-%d %a>") {
-        Ok(d) => d,
-        Err(e) => {
-            error!("Could not parse date for {:?}, reason {:?}", date_string, e);
-            return Err(ParsingError::CannotParseDate(blog_file.to_path_buf()));
-        }
-    };
+    let date = NaiveDate::parse_from_str(date_string.text().as_str(), "<%Y-%m-%d %a>")
+        .map_err(|_| SiteError::from(ParsingError::CannotParseDate(blog_file.to_path_buf())))?;
 
     let pub_date: String = date.format("%a, %d %b %Y 1:01:00 EST").to_string();
 
-    let toc = match document.find(Attr("id", "text-table-of-contents")).next() {
-        Some(toc) => toc.html(),
-        None => return Err(ParsingError::CannotFindToc(blog_file.to_path_buf())),
-    };
+    let toc = document
+        .find(Attr("id", "text-table-of-contents"))
+        .next()
+        .ok_or_else(|| ParsingError::CannotFindToc(blog_file.to_path_buf()))?;
 
-    let html = match document.find(Class("outline-2")).next() {
-        Some(org_body) => org_body,
-        None => return Err(ParsingError::CannotFindContents(blog_file.to_path_buf())),
-    };
+    let html = document
+        .find(Class("outline-2"))
+        .next()
+        .ok_or_else(|| ParsingError::CannotFindContents(blog_file.to_path_buf()))?;
 
     // The first paragraph is likely a good enough description.
-    let desc = match html.find(Name("p")).next() {
-        Some(first_para) => first_para.text(),
-        None => {
-            return Err(ParsingError::CannotFindFirstParagraph(
-                blog_file.to_path_buf(),
-            ));
-        }
-    };
+    let desc = html
+        .find(Name("p"))
+        .next()
+        .ok_or_else(|| ParsingError::CannotFindFirstParagraph(blog_file.to_path_buf()))?;
 
-    let slug_string = blog_file.clone().into_os_string().into_string().unwrap();
+    let slug_string = blog_file.to_string_lossy();
 
-    let slug = match slug_string.split('/').last() {
-        Some(s) => s.replace(".html", ""),
-        None => return Err(ParsingError::CannotMakeSlug(blog_file.to_path_buf())),
-    };
+    let slug = slug_string
+        .split('/')
+        .next_back()
+        .ok_or_else(|| ParsingError::CannotMakeSlug(blog_file.to_path_buf()))?
+        .replace(".html", "");
 
     let footnotes = document.find(Class("footdef")).map(|x| x.html()).collect();
 
-    info!("Successfully parsed {:?}", blog_file);
+    println!("Successfully parsed {:?}", blog_file);
 
     Ok(OrgModeHtml {
-        title,
+        title: title.text(),
         date,
         pub_date,
-        toc,
-        desc,
+        toc: toc.html(),
+        desc: desc.text(),
         html: html.html(),
         slug,
         footnotes,
     })
 }
 
-pub fn get_org_mode_files(blog_root: &str) -> Vec<OrgModeHtml> {
-    match get_html_files(blog_root) {
-        Ok(org) => {
-            let html_res: Vec<_> = org.iter().map(|o| get_html_contents(&o)).collect();
-            let mut html_success: Vec<OrgModeHtml> = Vec::new();
-            for html in html_res {
-                match html {
-                    Ok(h) => html_success.push(h),
-                    Err(e) => error!("Failed to parse file {:?}", e),
-                }
-            }
-            html_success.sort_by(|a, b| b.date.cmp(&a.date));
-            html_success
-        }
-        Err(e) => {
-            error!("Cannot get org mode files!");
-            panic!("{}", e);
+pub fn get_org_mode_files(blog_root: &str) -> Result<Vec<OrgModeHtml>> {
+    let org_files = get_html_files(blog_root)?;
+    let mut html_success: Vec<OrgModeHtml> = Vec::new();
+    for html_file in org_files {
+        match get_html_contents(&html_file) {
+            Ok(h) => html_success.push(h),
+            Err(e) => eprintln!("Failed to parse file {:?}: {}", html_file, e),
         }
     }
+    html_success.sort_by(|a, b| b.date.cmp(&a.date));
+    Ok(html_success)
 }
 
-pub fn get_org_blog(blog_root: &str) -> OrgBlog {
-    let blog_files = get_org_mode_files(blog_root);
+pub fn get_org_blog(blog_root: &str) -> Result<OrgBlog> {
+    let blog_files = get_org_mode_files(blog_root)?;
     let html: HashMap<Slug, OrgModeHtml> = blog_files
         .clone()
         .into_iter()
         .map(|x| (x.slug.clone(), x))
         .collect();
-    OrgBlog { html, blog_files }
+    Ok(OrgBlog { html, blog_files })
 }

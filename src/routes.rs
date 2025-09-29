@@ -1,147 +1,105 @@
+use crate::blog::OrgBlog;
 use crate::context::get_base_context;
-use axum::{
-    Router,
-    extract::{Extension, OriginalUri, Path},
-    http::StatusCode,
-    response::{IntoResponse, Redirect, Response},
-    routing::get,
-};
-use axum_template::RenderHtml;
-use axum_template::{TemplateEngine, engine::Engine};
-use tera::Tera;
-use tower_http::services::ServeFile;
+use crate::error::SiteError;
+use miette::Result;
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::Path;
+use tera::{Context, Tera};
 
-async fn redirect_trailing_slash(
-    request: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> Response {
-    let uri = request.uri();
-    let path = uri.path();
-
-    // Remove trailing slash (except for root "/")
-    if path.len() > 1 && path.ends_with('/') {
-        let new_path = path.trim_end_matches('/');
-        let new_uri = if let Some(query) = uri.query() {
-            format!("{}?{}", new_path, query)
-        } else {
-            new_path.to_string()
+pub fn generate_site(tera: &Tera, output_dir: &str, blog: &OrgBlog) -> Result<()> {
+    // Helper function to render and write a file
+    let render_and_write =
+        |template_name: &str, context: &Context, output_path: &str| -> Result<()> {
+            println!("Rendering {} to {}", template_name, output_path);
+            let content = tera
+                .render(template_name, context)
+                .map_err(SiteError::from)?;
+            let path = Path::new(output_dir).join(output_path);
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent).map_err(SiteError::from)?;
+            }
+            let mut file = File::create(path).map_err(SiteError::from)?;
+            file.write_all(content.as_bytes())
+                .map_err(SiteError::from)?;
+            Ok(())
         };
 
-        return Redirect::permanent(&new_uri).into_response();
-    }
-
-    next.run(request).await
-}
-
-pub fn get_routes() -> Router {
-    Router::new()
-        .route("/", get(index))
-        .route("/resume", get(resume))
-        .route("/blog", get(blog_index))
-        .route("/linkedin", get(linkedin))
-        .route("/github", get(github))
-        .route("/robots.txt", get(robots_txt))
-        .route("/feed", get(feed))
-        .route("/rss", get(rss))
-        .route_service("/resume_pdf", ServeFile::new("resume/dpbriggs_resume.pdf"))
-        .route("/500", get(crash))
-        .route("/health", get(health))
-        .route("/blog/{slug}", get(blog_article))
-        .fallback(not_found)
-        .layer(axum::middleware::from_fn(redirect_trailing_slash))
-}
-
-async fn index(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
-    let mut context = get_base_context("/");
+    // Generate index page
+    let mut context = get_base_context("/", blog);
     context.kv.insert("title".to_owned(), "home".into());
-    RenderHtml("index.html.tera", engine, context)
-}
+    render_and_write("index.html.tera", &(&context).into(), "index.html")?;
 
-async fn resume(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
-    let mut context = get_base_context("/resume");
+    // Generate resume page
+    let mut context = get_base_context("/resume", blog);
     context.kv.insert("title".to_owned(), "resume".into());
-    RenderHtml("resume.html.tera", engine, context)
-}
+    render_and_write("resume.html.tera", &(&context).into(), "resume/index.html")?;
 
-async fn blog_index(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
-    let mut context = get_base_context("/blog");
+    // Generate blog index page
+    let mut context = get_base_context("/blog", blog);
     context.kv.insert("title".to_owned(), "blog".into());
-    RenderHtml("blog/blog_root.html.tera", engine, context)
-}
+    render_and_write(
+        "blog/blog_root.html.tera",
+        &(&context).into(),
+        "blog/index.html",
+    )?;
 
-async fn linkedin(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
-    let mut context = get_base_context("/linkedin");
+    // Generate linkedin page
+    let mut context = get_base_context("/linkedin", blog);
     context.kv.insert("title".to_owned(), "linkedin".into());
-    RenderHtml("linkedin.html.tera", engine, context)
-}
+    render_and_write(
+        "linkedin.html.tera",
+        &(&context).into(),
+        "linkedin/index.html",
+    )?;
 
-async fn github(Extension(engine): Extension<Engine<Tera>>) -> impl IntoResponse {
-    let mut context = get_base_context("/github");
+    // Generate github page
+    let mut context = get_base_context("/github", blog);
     context.kv.insert("title".to_owned(), "github".into());
-    RenderHtml("github.html.tera", engine, context)
-}
+    render_and_write("github.html.tera", &(&context).into(), "github/index.html")?;
 
-async fn robots_txt() -> impl IntoResponse {
-    "User-agent: *\nDisallow:"
-}
+    // Generate robots.txt
+    println!("Generating robots.txt");
+    let mut file =
+        File::create(Path::new(output_dir).join("robots.txt")).map_err(SiteError::from)?;
+    file.write_all(b"User-agent: *\nDisallow:")
+        .map_err(SiteError::from)?;
 
-async fn feed(Extension(engine): Extension<Engine<Tera>>) -> Response {
-    rss(Extension(engine)).await
-}
+    // Generate RSS feed
+    let rss_context = get_base_context("/blog", blog);
+    render_and_write(
+        "blog-rss.xml.tera",
+        &(&rss_context).into(),
+        "feed/index.xml",
+    )?;
+    render_and_write("blog-rss.xml.tera", &(&rss_context).into(), "rss/index.xml")?;
 
-async fn rss(Extension(engine): Extension<Engine<Tera>>) -> Response {
-    let context = get_base_context("/blog");
-    let template = RenderHtml("blog-rss.xml.tera", engine, context);
-    (
-        StatusCode::OK,
-        [("Content-Type", "application/rss+xml")],
-        template.into_response(),
-    )
-        .into_response()
-}
+    // Generate 404 page
+    let mut context = get_base_context("/", blog);
+    context.kv.insert("title".to_owned(), "404".into());
+    context.kv.insert("uri".to_owned(), "/".into());
+    context.kv.insert("blog_uri".to_owned(), "".into());
+    render_and_write("404.html.tera", &(&context).into(), "404.html")?;
 
-async fn crash() -> impl IntoResponse {
-    (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
-}
+    // Generate 500 page
+    let mut context = get_base_context("/", blog);
+    context.kv.insert("title".to_owned(), "500".into());
+    context.kv.insert("uri".to_owned(), "/".into());
+    render_and_write("500.html.tera", &(&context).into(), "500.html")?;
 
-async fn health() -> impl IntoResponse {
-    (StatusCode::OK, "OK")
-}
-
-async fn blog_article(
-    original_uri: OriginalUri,
-    Path(slug): Path<String>,
-    Extension(engine): Extension<Engine<Tera>>,
-) -> Response {
-    let mut context = get_base_context("/blog");
-    context.kv.insert("title".to_owned(), "blog".to_owned());
-    if let Some(curr_blog) = context.blog.html.get(&slug) {
-        context.curr_blog = Some(curr_blog);
-        context.kv.insert("curr_slug".to_owned(), slug);
-        RenderHtml("blog/blog_article.html.tera", engine, context).into_response()
-    } else {
-        not_found(original_uri, Extension(engine))
-            .await
-            .into_response()
+    // Generate blog articles
+    for (slug, blog_post) in &blog.html {
+        let mut context = get_base_context("/blog", blog);
+        context.kv.insert("title".to_owned(), "blog".to_owned());
+        context.curr_blog = Some(blog_post);
+        context.kv.insert("curr_slug".to_owned(), slug.clone());
+        let output_path = format!("blog/{}/index.html", slug);
+        render_and_write(
+            "blog/blog_article.html.tera",
+            &(&context).into(),
+            &output_path,
+        )?;
     }
-}
 
-async fn not_found(
-    OriginalUri(original_uri): OriginalUri,
-    Extension(engine): Extension<Engine<Tera>>,
-) -> impl IntoResponse {
-    let mut context = get_base_context("/");
-    context.kv.insert("title".to_owned(), "404".to_owned());
-    context
-        .kv
-        .insert("uri".to_owned(), original_uri.path().to_string());
-    context.kv.insert("blog_uri".to_owned(), "".to_owned());
-    use miette::IntoDiagnostic;
-    if let Err(e) = engine.render("404.html.tera", &context).into_diagnostic() {
-        println!("Error serializing context for 404 page: {:?}", e);
-    }
-    (
-        StatusCode::NOT_FOUND,
-        RenderHtml("404.html.tera", engine, context),
-    )
+    Ok(())
 }

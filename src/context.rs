@@ -1,7 +1,8 @@
 use lazy_static::lazy_static;
+use serde::Serialize;
 use std::collections::HashMap;
 
-use crate::blog::{OrgBlog, OrgModeHtml, get_org_blog};
+use crate::blog::{OrgBlog, OrgModeHtml};
 
 /// BLOG_ROOT is the relative path to blog
 pub static BLOG_ROOT: &str = "blog/";
@@ -26,7 +27,7 @@ pub struct SiteContext<'a> {
     /// kv is the dynamic key-value context of the website.
     pub kv: SiteContextKv,
     /// blog is all blog related items, see [OrgBlog](crate::context::OrgBlog)
-    pub blog: &'static OrgBlog,
+    pub blog: &'a OrgBlog,
     /// curr_blog is the current blog article, if applicable.
     pub curr_blog: Option<&'a OrgModeHtml>,
 }
@@ -44,10 +45,6 @@ macro_rules! site_context(
 );
 
 lazy_static! {
-    static ref STATIC_BLOG_ENTRIES: OrgBlog = get_org_blog(BLOG_ROOT);
-}
-
-lazy_static! {
     static ref STATIC_SITE_CONTEXT_KV: SiteContextKv = {
         site_context! {
             "domain_name" =>  "dpbriggs.ca",
@@ -58,7 +55,7 @@ lazy_static! {
             "linkedin_uri" =>  "/linkedin",
             "github_uri" =>  "/github",
             "resume_uri" =>  "/resume",
-            "resume_pdf_uri" =>  "/resume_pdf",
+            "resume_pdf_uri" =>  "/dpbriggs_resume.pdf",
             "rss_uri" =>  "/rss",
             "crash_uri" =>  "/500",
             "web_sep" =>  "--",
@@ -73,8 +70,21 @@ lazy_static! {
     };
 }
 
+use tera::Context;
+
+impl<'a> From<&SiteContext<'a>> for Context {
+    fn from(site_context: &SiteContext<'a>) -> Self {
+        let mut context = Context::new();
+        context.insert("base", &site_context.base);
+        context.insert("kv", &site_context.kv);
+        context.insert("blog", &site_context.blog);
+        context.insert("curr_blog", &site_context.curr_blog);
+        context
+    }
+}
+
 /// get_base_context
-pub fn get_base_context(nav_href_uri: &str) -> SiteContext<'_> {
+pub fn get_base_context<'a>(nav_href_uri: &str, blog: &'a OrgBlog) -> SiteContext<'a> {
     SiteContext {
         base: &STATIC_SITE_CONTEXT_KV,
         // TODO: Not waste memory like this.
@@ -83,7 +93,7 @@ pub fn get_base_context(nav_href_uri: &str) -> SiteContext<'_> {
             tmp.insert("nav_site_href".to_owned(), nav_href_uri.to_owned());
             tmp
         },
-        blog: &STATIC_BLOG_ENTRIES,
+        blog,
         curr_blog: None,
     }
 }

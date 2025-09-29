@@ -9,7 +9,7 @@ Something bad happened. {% if kv.uri == base.crash_uri %} (on purpose) {% endif 
 <br>
 {% if kv.uri == base.resume_uri %}
 I'm probably updating the website right now, so the my <b>Resume</b> is unavailable.
-Please try again in a few minutes. In the meantime, please checkout my 
+Please try again in a few minutes. In the meantime, please checkout my
 <a href="{{ base.linkedin_url }}" target="_blank">LinkedIn<span class="sr-only">(LinkedIn)</span></a>.
 {% else %}
 Your interaction with {{ kv.uri }} has crashed something in the backend.

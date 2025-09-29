@@ -6,3 +6,4 @@
 auto/
 *.tex
 .caddy_env
+public
