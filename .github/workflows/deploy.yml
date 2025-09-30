@@ -34,7 +34,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build site
-        run: cargo run --release
+        run: cargo run --release -- --extra-paths resume/dpbriggs_resume.pdf
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
