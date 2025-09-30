@@ -6,7 +6,8 @@
         <div class="container center-desktop d-flex h-100">
             <div class="row align-items-center w-100">
                 <div class="align-self-center bordered mx-auto index-card">
-                    <h1> 404 {{ base.web_sep }} {{ kv.uri }} </h1>
+                    <-- TODO: properly add the URL path -->
+                    <h1> 404 {{ base.web_sep }} </h1>
                     <br>
                     The page you're looking for may not exist or has been deleted.
                     <br>

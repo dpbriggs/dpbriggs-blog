@@ -72,12 +72,10 @@ pub fn generate_site(tera: &Tera, output_dir: &str, blog: &OrgBlog) -> Result<()
         &(&rss_context).into(),
         "feed/index.xml",
     )?;
-    render_and_write("blog-rss.xml.tera", &(&rss_context).into(), "rss/index.xml")?;
 
     // Generate 404 page
     let mut context = get_base_context("/", blog);
     context.kv.insert("title".to_owned(), "404".into());
-    context.kv.insert("uri".to_owned(), "/".into());
     context.kv.insert("blog_uri".to_owned(), "".into());
     render_and_write("404.html.tera", &(&context).into(), "404.html")?;
 

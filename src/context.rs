@@ -56,7 +56,7 @@ lazy_static! {
             "github_uri" =>  "/github",
             "resume_uri" =>  "/resume",
             "resume_pdf_uri" =>  "/dpbriggs_resume.pdf",
-            "rss_uri" =>  "/rss",
+            "rss_uri" =>  "/feed/index.xml",
             "crash_uri" =>  "/500",
             "web_sep" =>  "--",
             "admin_email" =>  "david@dpbriggs.ca",
