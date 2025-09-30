@@ -1,5 +1,0 @@
-dpbriggs.ca www.dpbriggs.ca
-
-encode gzip
-
-reverse_proxy localhost:8000
