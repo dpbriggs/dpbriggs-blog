@@ -7,6 +7,9 @@ use crate::blog::{OrgBlog, OrgModeHtml};
 /// BLOG_ROOT is the relative path to blog
 pub static BLOG_ROOT: &str = "blog/";
 
+/// PICS_ROOT is the relative path to pics
+pub static PICS_ROOT: &str = "pics/";
+
 /// SiteContextKv represents all key-value variables used in
 /// this project.
 ///
@@ -63,6 +66,7 @@ lazy_static! {
             "full_name" =>  "David Briggs",
             "internet_handle" =>  "dpbriggs",
             "my_email" =>  "david@dpbriggs.ca",
+            "pics_uri" =>  "/pics",
             "github_url" => "https://github.com/dpbriggs",
             "github_repo_url" => "https://github.com/dpbriggs/dpbriggs-blog",
             "linkedin_url" => "https://www.linkedin.com/in/dpbriggs"

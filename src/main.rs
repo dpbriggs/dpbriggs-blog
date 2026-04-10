@@ -6,6 +6,7 @@ mod tests;
 mod blog;
 mod context;
 mod error;
+mod pics;
 mod routes;
 
 use clap::Parser;
@@ -16,8 +17,9 @@ use std::path::Path;
 use tera::Tera;
 
 use crate::blog::get_org_blog;
-use crate::context::BLOG_ROOT;
+use crate::context::{BLOG_ROOT, PICS_ROOT};
 use crate::error::SiteError;
+use crate::pics::get_pics_gallery;
 use crate::routes::generate_site;
 
 #[derive(Parser, Debug)]
@@ -69,9 +71,10 @@ fn main() -> Result<()> {
     }
 
     let blog = get_org_blog(BLOG_ROOT)?;
+    let pics = get_pics_gallery(PICS_ROOT)?;
 
     println!("Generating site...");
-    generate_site(&tera, output_dir, &blog)?;
+    generate_site(&tera, output_dir, &blog, &pics)?;
     println!("Site generation complete.");
 
     Ok(())

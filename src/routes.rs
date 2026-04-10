@@ -1,13 +1,15 @@
 use crate::blog::OrgBlog;
 use crate::context::get_base_context;
 use crate::error::SiteError;
+use crate::pics::PicsGallery;
 use miette::Result;
+use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 use tera::{Context, Tera};
 
-pub fn generate_site(tera: &Tera, output_dir: &str, blog: &OrgBlog) -> Result<()> {
+pub fn generate_site(tera: &Tera, output_dir: &str, blog: &OrgBlog, pics: &PicsGallery) -> Result<()> {
     // Helper function to render and write a file
     let render_and_write =
         |template_name: &str, context: &Context, output_path: &str| -> Result<()> {
@@ -98,6 +100,42 @@ pub fn generate_site(tera: &Tera, output_dir: &str, blog: &OrgBlog) -> Result<()
             &output_path,
         )?;
     }
+
+    // Copy pics images and generate pics page
+    for session in &pics.sessions {
+        let src_dir = Path::new("pics").join(&session.date_str);
+        let dest_dir = Path::new(output_dir).join("pics").join(&session.date_str);
+        if src_dir.is_dir() {
+            fs::create_dir_all(&dest_dir).map_err(SiteError::from)?;
+            for entry in fs::read_dir(&src_dir).map_err(SiteError::from)? {
+                let entry = entry.map_err(SiteError::from)?;
+                let path = entry.path();
+                if path.is_file() {
+                    let ext = path.extension().and_then(OsStr::to_str).unwrap_or("");
+                    if ext != "md" {
+                        let dest = dest_dir.join(path.file_name().unwrap());
+                        fs::copy(&path, &dest).map_err(SiteError::from)?;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut context = get_base_context("/pics", blog);
+    context.kv.insert("title".to_owned(), "pics".into());
+    let mut pics_context: Context = (&context).into();
+    pics_context.insert("pics", pics);
+    println!("Rendering pics.html.tera to pics/index.html");
+    let content = tera
+        .render("pics.html.tera", &pics_context)
+        .map_err(SiteError::from)?;
+    let path = Path::new(output_dir).join("pics/index.html");
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(SiteError::from)?;
+    }
+    let mut file = File::create(path).map_err(SiteError::from)?;
+    file.write_all(content.as_bytes())
+        .map_err(SiteError::from)?;
 
     Ok(())
 }
