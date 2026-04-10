@@ -8,7 +8,9 @@
         {% for session in pics.sessions %}
         <div class="card mb-5">
             <div class="card-header">
-                <strong>{{ session.title }}</strong>
+                <a href="/pics/{{ session.date_str }}/" class="text-reset text-decoration-none">
+                    <strong>{{ session.title }}</strong> 🔗
+                </a>
                 <small class="text-muted ml-2">{{ session.date_str }}</small>
             </div>
             <div class="card-body">

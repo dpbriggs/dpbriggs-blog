@@ -125,17 +125,17 @@ pub fn generate_site(tera: &Tera, output_dir: &str, blog: &OrgBlog, pics: &PicsG
     context.kv.insert("title".to_owned(), "pics".into());
     let mut pics_context: Context = (&context).into();
     pics_context.insert("pics", pics);
-    println!("Rendering pics.html.tera to pics/index.html");
-    let content = tera
-        .render("pics.html.tera", &pics_context)
-        .map_err(SiteError::from)?;
-    let path = Path::new(output_dir).join("pics/index.html");
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(SiteError::from)?;
+    render_and_write("pics.html.tera", &pics_context, "pics/index.html")?;
+
+    // Generate individual session pages
+    for session in &pics.sessions {
+        let mut context = get_base_context("/pics", blog);
+        context.kv.insert("title".to_owned(), session.title.clone());
+        let mut session_context: Context = (&context).into();
+        session_context.insert("session", session);
+        let output_path = format!("pics/{}/index.html", session.date_str);
+        render_and_write("pics/pic_session.html.tera", &session_context, &output_path)?;
     }
-    let mut file = File::create(path).map_err(SiteError::from)?;
-    file.write_all(content.as_bytes())
-        .map_err(SiteError::from)?;
 
     Ok(())
 }
