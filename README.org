@@ -20,21 +20,15 @@ Built with:
 
 Running the website locally is pretty easy, thanks to =cargo= and =rustup=.
 
-1. Be sure you have [[https://rustup.rs/][rustup]] to install a nightly toolchain.
-2. Install a nightly toolchain =rustup toolchain add nightly=
-3. Set nightly as your default toolchain =rustup default nightly=
-4. Clone and enter the project =git clone git@github.com:dpbriggs/dpbriggs-blog.git && cd dpbriggs-blog=
-5. Run the project =cargo run=
-6. (optional) rename the project (replace =myname= with whatever you want):
-   - =mv dpbriggs-blog myname-blog=
-   - Edit =Cargo.toml= and change instances of =dpbriggs= in there to =myname=
-   - Edit =src/context.rs= and update the default site context.
-
-Alternatively, use the make file:
+1. Install [[https://rustup.rs/][rustup]] and a stable Rust toolchain.
+2. Install =cargo-watch=: =cargo install cargo-watch=
+3. Clone and enter the project: =git clone git@github.com:dpbriggs/dpbriggs-blog.git && cd dpbriggs-blog=
+4. Build and serve the site:
 
 #+begin_example
-make watch # live-reload
-make test  # run tests
+make watch  # build, serve on http://localhost:8080, and rebuild on changes
+make build  # one-off build
+make serve  # serve public/ on http://localhost:8080
 #+end_example
 
 ** Deploying the website

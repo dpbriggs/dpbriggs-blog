@@ -1,8 +1,5 @@
 extern crate log;
 
-#[cfg(test)]
-mod tests;
-
 mod blog;
 mod context;
 mod error;

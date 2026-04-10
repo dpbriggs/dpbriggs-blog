@@ -13,18 +13,24 @@
             </div>
             <div class="card-body">
                 {% if session.description %}
-                <p class="card-text">{{ session.description }}</p>
+                <p class="card-text">{{ session.description | safe }}</p>
                 {% endif %}
                 <div class="row">
                     {% for photo in session.photos %}
-                    <div class="col-6 col-md-4 col-lg-3 mb-3">
+                    <div class="col-12 mb-2">
                         <a href="/pics/{{ session.date_str }}/{{ photo.filename }}" target="_blank">
                             <img src="/pics/{{ session.date_str }}/{{ photo.filename }}"
                                  class="img-fluid rounded"
                                  alt="{% if photo.caption %}{{ photo.caption }}{% endif %}">
                         </a>
-                        {% if photo.caption %}
-                        <small class="text-muted d-block mt-1">{{ photo.caption }}</small>
+                        {% if photo.title %}
+                        <p class="text-muted mt-1 mb-1">{{ photo.title | safe }}</p>
+                        {% endif %}
+                        {% if photo.maps_url %}
+                        <a href="{{ photo.maps_url }}" target="_blank" class="text-muted small d-block mb-1">📍 View on Maps</a>
+                        {% endif %}
+                        {% if photo.description %}
+                        <p class="mt-1">{{ photo.description | safe }}</p>
                         {% endif %}
                     </div>
                     {% endfor %}
