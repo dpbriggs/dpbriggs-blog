@@ -1,34 +1,28 @@
-<nav class="navbar-light navbar-expand-sm bg-light light-padding">
+<nav class="navbar navbar-light navbar-expand-sm bg-light light-padding">
+    <a class="navbar-brand monospace d-sm-none pl-2" href="{{ base.root_uri }}">{{ base.internet_handle }}</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="navbar-collapse" id="navbarSupportedContent">
-    <div class="navbar-nav mr-auto">
-        <div class="container monospace">
-            <div class="row">
-                <div class="col-sm tight-column {% if kv.nav_site_href == base.root_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ base.root_uri }}">
-                        Home
-                        <span class="sr-only">({{ base.domain_name }})</span>
-                    </a>
-                </div>
-                <div class="col-sm tight-column {% if kv.nav_site_href == base.linkedin_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ base.linkedin_uri }}"> LinkedIn <span class="sr-only">(current)</span></a>
-                </div>
-                <div class="col-sm tight-column {% if kv.nav_site_href == base.github_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ base.github_uri }}"> Github <span class="sr-only">(current)</span></a>
-                </div>
-                <div class="col-sm tight-column {% if kv.nav_site_href == base.resume_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ base.resume_uri }}"> Resume <span class="sr-only">(current)</span></a>
-                </div>
-                <div class="col-sm tight-column {% if kv.nav_site_href == base.blog_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ base.blog_uri }}"> Blog <span class="sr-only">(current)</span></a>
-                </div>
-                <div class="col-sm tight-column {% if kv.nav_site_href == base.pics_uri %} navbar-underlined {% endif %}">
-                    <a class="nav-link" href="{{ base.pics_uri }}"> Pics <span class="sr-only">(current)</span></a>
-                </div>
-            </div>
-        </div>
+    <div class="collapse navbar-collapse monospace" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ base.root_uri }}"><span class="{% if kv.nav_site_href == base.root_uri %}navbar-underlined{% endif %}">Home</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ base.linkedin_uri }}"><span class="{% if kv.nav_site_href == base.linkedin_uri %}navbar-underlined{% endif %}">LinkedIn</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ base.github_uri }}"><span class="{% if kv.nav_site_href == base.github_uri %}navbar-underlined{% endif %}">Github</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ base.resume_uri }}"><span class="{% if kv.nav_site_href == base.resume_uri %}navbar-underlined{% endif %}">Resume</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ base.blog_uri }}"><span class="{% if kv.nav_site_href == base.blog_uri %}navbar-underlined{% endif %}">Blog</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ base.pics_uri }}"><span class="{% if kv.nav_site_href == base.pics_uri %}navbar-underlined{% endif %}">Pics</span></a>
+            </li>
+        </ul>
     </div>
-  </div>
 </nav>

@@ -78,6 +78,12 @@ ul,li {
     border-bottom:3px solid lightgrey !important;
 }
 
+@media (min-width: 576px) {
+    .navbar .nav-link {
+        font-size: 1.1rem;
+    }
+}
+
 .index-card {
     margin-top: 10px;
     width: 600px;
