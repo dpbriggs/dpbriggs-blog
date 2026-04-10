@@ -1,14 +1,14 @@
 {% extends "base.html.tera" %}
 
 {% block content %}
-<div class="container py-4 monospace">
+<div class="container py-4 monospace pics-container">
     <h3 class="mb-4">pics</h3>
 
     {% if pics.sessions %}
         {% for session in pics.sessions %}
         <div class="card mb-5">
             <div class="card-header">
-                <a href="/pics/{{ session.date_str }}/" class="text-reset text-decoration-none">
+                <a href="/pics/{{ session.date_str }}/" class="text-reset text-decoration-none d-block">
                     <strong>{{ session.title }}</strong> 🔗
                 </a>
                 <small class="text-muted ml-2">{{ session.date_str }}</small>
@@ -20,16 +20,17 @@
                 <div class="row">
                     {% for photo in session.photos %}
                     <div class="col-12 mb-2">
-                        <a href="/pics/{{ session.date_str }}/{{ photo.filename }}" target="_blank">
+                        <a href="/pics/{{ session.date_str }}/{{ photo.filename }}">
                             <img src="/pics/{{ session.date_str }}/{{ photo.filename }}"
                                  class="img-fluid rounded"
+                                 loading="lazy"
                                  alt="{% if photo.caption %}{{ photo.caption }}{% endif %}">
                         </a>
                         {% if photo.title %}
                         <p class="text-muted mt-1 mb-1">{{ photo.title | safe }}</p>
                         {% endif %}
                         {% if photo.maps_url %}
-                        <a href="{{ photo.maps_url }}" target="_blank" class="text-muted small d-block mb-1">📍 View on Maps</a>
+                        <a href="{{ photo.maps_url }}" target="_blank" class="text-muted small d-inline-block py-2 mb-1">📍 View on Maps</a>
                         {% endif %}
                         {% if photo.description %}
                         <p class="mt-1">{{ photo.description | safe }}</p>

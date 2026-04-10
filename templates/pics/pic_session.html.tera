@@ -1,8 +1,8 @@
 {% extends "base.html.tera" %}
 
 {% block content %}
-<div class="container py-4 monospace">
-    <a href="/pics/" class="text-muted small">&larr; all pics</a>
+<div class="container py-4 monospace pics-container">
+    <a href="/pics/" class="btn btn-sm btn-light mb-3">&larr; all pics</a>
     <h3 class="mt-2 mb-1">{{ session.title }}</h3>
     <small class="text-muted">{{ session.date_str }}</small>
 
@@ -16,13 +16,14 @@
             <a href="/pics/{{ session.date_str }}/{{ photo.filename }}" target="_blank">
                 <img src="/pics/{{ session.date_str }}/{{ photo.filename }}"
                      class="img-fluid rounded"
+                     loading="lazy"
                      alt="{% if photo.title %}{{ photo.title }}{% endif %}">
             </a>
             {% if photo.title %}
             <p class="text-muted mt-1 mb-1">{{ photo.title | safe }}</p>
             {% endif %}
             {% if photo.maps_url %}
-            <a href="{{ photo.maps_url }}" target="_blank" class="text-muted small d-block mb-1">&#128205; View on Maps</a>
+            <a href="{{ photo.maps_url }}" target="_blank" class="text-muted small d-inline-block py-2 mb-1">&#128205; View on Maps</a>
             {% endif %}
             {% if photo.description %}
             <p class="mt-1">{{ photo.description | safe }}</p>

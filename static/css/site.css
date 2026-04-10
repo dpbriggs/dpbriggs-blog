@@ -180,3 +180,24 @@ table {
     padding-bottom: 10px;
 }
 
+
+/* ---- Pics: mobile full-bleed & spacing ---- */
+@media (max-width: 767px) {
+    .pics-container {
+        padding-left: 0;
+        padding-right: 0;
+    }
+    .pics-container .card {
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+        margin-bottom: 1.5rem !important;
+    }
+    .pics-container .card-body {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .pics-container .card-header {
+        border-radius: 0 !important;
+    }
+}
